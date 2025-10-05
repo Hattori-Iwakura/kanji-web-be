@@ -3,9 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 const ConfigKey = {
   PORT_SERVER: 'PORT_SERVER',
-  DB_ADDRESS: 'DB_ADDRESS',
-  DB_USER: 'DB_USER',
-  DB_PASS: 'DB_PASS',
+  DATABASE_URL: 'DATABASE_URL',
 } as const;
 
 @Injectable()
@@ -26,8 +24,8 @@ export class AppConfigService {
     return this.getOrStop<number>(ConfigKey.PORT_SERVER)
   }
 
-  get dbAddress(): string {
-    return this.getOrStop(ConfigKey.DB_ADDRESS)
+  get dbUrl(): string {
+    return this.getOrStop(ConfigKey.DATABASE_URL)
   }
 
 }

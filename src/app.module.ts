@@ -1,5 +1,4 @@
 import { MiddlewareConsumer, Module, NestModule, ValidationPipe } from '@nestjs/common';
-import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppConfigModule } from './modules/app_config/app_config.module';
 import { AppConfigService } from './modules/app_config/app_config.service';
@@ -8,10 +7,12 @@ import { LoggingInterceptor } from './interceptors/logging/logging.interceptor';
 import { LoggerModule } from './modules/logger/logger.module';
 import { RequestContextMiddleware } from './middlewares/request-context/request-context.middleware';
 import { TransformInterceptor } from './interceptors/transform/transform.interceptor';
+import { DbClientModule } from './modules/db_client/db_client.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
-  imports: [AppConfigModule, LoggerModule],
-  controllers: [AppController],
+  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule],
+  controllers: [],
   providers: [
     AppService, 
     AppConfigService,
