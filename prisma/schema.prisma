@@ -15,14 +15,29 @@ datasource db {
 }
 
 model Users {
-    id Int @default(autoincrement()) @id
-    account String @unique
-    hash_password String
-    email String @unique
-    profile_image String?
-    is_system Boolean @default(false)
-    is_active Boolean @default(true)
-    is_first_login Boolean @default(true)
-    create_at DateTime @default(now())
-    update_at DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  account        String   @unique
+  hash_password  String
+  email          String   @unique
+  profile_image  String?
+  is_system      Boolean  @default(false)
+  is_active      Boolean  @default(true)
+  is_first_login Boolean  @default(true)
+  create_at      DateTime @default(now())
+  update_at      DateTime @updatedAt
+}
+
+model Kanji {
+  id           Int      @id @default(autoincrement())
+  character    String   @unique
+  onyomi       String?
+  kunyomi      String?
+  meanings     String
+  stroke_count Int?
+  jlpt         Int?
+  grade        Int?
+  frequency    Int?
+  radicals     String?
+  create_at    DateTime @default(now())
+  update_at    DateTime @updatedAt
 }

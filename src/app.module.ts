@@ -9,9 +9,10 @@ import { RequestContextMiddleware } from './middlewares/request-context/request-
 import { TransformInterceptor } from './interceptors/transform/transform.interceptor';
 import { DbClientModule } from './modules/db_client/db_client.module';
 import { UserModule } from './modules/user/user.module';
+import { KanjiModule } from './modules/kanji/kanji.module';
 
 @Module({
-  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule],
+  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule],
   controllers: [],
   providers: [
     AppService, 
