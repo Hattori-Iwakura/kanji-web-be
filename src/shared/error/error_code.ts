@@ -1,6 +1,12 @@
 
 export const ErrorCode = {
-    Not_Found: 'Not_Found',
-    Already_Exists: 'Already_Exists',
-
+    NotFound: 'NotFound',
+    AlreadyExists: 'AlreadyExists',
+    InvalidInput: 'InvalidInput',
+    Forbidden: 'Forbidden',
+    Conflict: 'Conflict',
+    DatabaseError: 'DatabaseError',
+    ValidationError: 'ValidationError',
+    Unauthorized: 'Unauthorized',
+    BadRequest: 'BadRequest'
 } as const
