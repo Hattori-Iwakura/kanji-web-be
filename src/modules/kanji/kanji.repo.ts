@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { DbClient } from "../db_client/db_client.service";
-import { Kanji, Prisma } from "generated/prisma";
+import { Kanji } from "generated/prisma";
 import { CreateKanjiDto, UpdateKanjiDto } from "./dtos";
 
 @Injectable()

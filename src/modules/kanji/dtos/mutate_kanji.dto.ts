@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsArray } from "class-validator";
 
 export class CreateKanjiDto {
     @ApiProperty()
@@ -46,6 +46,17 @@ export class CreateKanjiDto {
     @IsOptional()
     @IsString({ each: true })
     radicals?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsNumber()
+    level_id?: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsNumber()
+    @IsArray()
+    category_id?: number[];
 }
 
 export class UpdateKanjiDto {

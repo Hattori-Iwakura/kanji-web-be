@@ -25,6 +25,8 @@ model Users {
   is_first_login Boolean  @default(true)
   create_at      DateTime @default(now())
   update_at      DateTime @updatedAt
+
+  KanjiCollections KanjiCollections[]
 }
 
 model Kanji {
@@ -40,4 +42,39 @@ model Kanji {
   radicals     String?
   create_at    DateTime @default(now())
   update_at    DateTime @updatedAt
+
+  KanjiCollectionItems KanjiCollectionItems[]
+}
+
+model KanjiCollections {
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String?
+  user_id         Int? // null = public collection
+  is_public       Boolean  @default(false)
+  collection_type String   @default("custom") // "custom", "jlpt", "grade", "category"
+  metadata        Json? // store additional config like jlpt level, category ids, etc.
+  create_at       DateTime @default(now())
+  update_at       DateTime @updatedAt
+
+  Users                Users?                 @relation(fields: [user_id], references: [id])
+  KanjiCollectionItems KanjiCollectionItems[]
+
+  @@index([user_id])
+  @@index([collection_type])
+}
+
+model KanjiCollectionItems {
+  id            Int      @id @default(autoincrement())
+  collection_id Int
+  kanji_id      Int
+  order_index   Int? // for custom ordering
+  create_at     DateTime @default(now())
+
+  Collection KanjiCollections @relation(fields: [collection_id], references: [id], onDelete: Cascade)
+  Kanji      Kanji            @relation(fields: [kanji_id], references: [id], onDelete: Cascade)
+
+  @@unique([collection_id, kanji_id])
+  @@index([collection_id])
+  @@index([kanji_id])
 }

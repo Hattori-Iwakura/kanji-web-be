@@ -10,9 +10,10 @@ import { TransformInterceptor } from './interceptors/transform/transform.interce
 import { DbClientModule } from './modules/db_client/db_client.module';
 import { UserModule } from './modules/user/user.module';
 import { KanjiModule } from './modules/kanji/kanji.module';
+import { KanjiListModule } from './modules/kanji_list/kanji_list.module';
 
 @Module({
-  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule],
+  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule, KanjiListModule],
   controllers: [],
   providers: [
     AppService, 
