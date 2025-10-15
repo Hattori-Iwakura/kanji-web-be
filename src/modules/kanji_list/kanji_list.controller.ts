@@ -11,10 +11,12 @@ import {
     Query, 
     ParseIntPipe,
     ConflictException,
-    InternalServerErrorException
+    InternalServerErrorException,
+    UseGuards,
+    Req
 } from '@nestjs/common';
 import { KanjiListService } from './kanji_list.service';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { 
     CreateKanjiListDto, 
     UpdateKanjiListDto, 
@@ -23,11 +25,13 @@ import {
     GenerateJLPTListDto,
     GenerateGradeListDto,
     GenerateFrequencyListDto,
-    BulkAddKanjiDto
+    BulkAddKanjiDto,
 } from './dtos';
 import { ErrorCode } from 'src/shared/error';
+import { JwtGuard } from '../auth/guard/jwt.guard';
 
 @ApiTags('Kanji Lists')
+@ApiBearerAuth('access-token')
 @Controller('kanji-lists')
 export class KanjiListController {
     constructor(private readonly kanjiListService: KanjiListService) {}
@@ -71,9 +75,12 @@ export class KanjiListController {
         }
     }
 
+    @UseGuards(JwtGuard)
     @Post()
     @ApiOperation({ summary: 'Create new kanji list' })
-    async createKanjiList(@Body() data: CreateKanjiListDto) {
+    async createKanjiList(
+        @Body() data: CreateKanjiListDto
+    ) {
         try {
             return await this.kanjiListService.createAsync(data);
         } catch (error) {

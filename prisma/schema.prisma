@@ -14,19 +14,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  ADMIN
+  USER
+}
+
 model Users {
   id             Int      @id @default(autoincrement())
   account        String   @unique
   hash_password  String
   email          String   @unique
   profile_image  String?
+  role           UserRole @default(USER)
   is_system      Boolean  @default(false)
   is_active      Boolean  @default(true)
   is_first_login Boolean  @default(true)
   create_at      DateTime @default(now())
   update_at      DateTime @updatedAt
 
+  sessions         UserSession[]
   KanjiCollections KanjiCollections[]
+}
+
+model UserSession {
+  id               Int      @id @default(autoincrement())
+  sessionId        String   @unique
+  userId           Int
+  user             Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String?
+  revoked          Boolean  @default(false)
+  userAgent        String?
+  ip               String?
+  createdAt        DateTime @default(now())
+  lastActiveAt     DateTime @default(now())
+  expiresAt        DateTime
+  metadata         Json?
+
+  @@index([userId])
+  @@index([sessionId])
 }
 
 model Kanji {

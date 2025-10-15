@@ -11,11 +11,14 @@ import { DbClientModule } from './modules/db_client/db_client.module';
 import { UserModule } from './modules/user/user.module';
 import { KanjiModule } from './modules/kanji/kanji.module';
 import { KanjiListModule } from './modules/kanji_list/kanji_list.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { DbClient } from './modules/db_client/db_client.service';
 
 @Module({
-  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule, KanjiListModule],
+  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule, KanjiListModule, AuthModule],
   controllers: [],
   providers: [
+    DbClient,
     AppService, 
     AppConfigService,
     {

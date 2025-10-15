@@ -3,7 +3,7 @@ import { KanjiService } from './kanji.service';
 import { Kanji } from 'generated/prisma';
 import { ApiTags } from '@nestjs/swagger';
 import { ErrorCode } from 'src/shared/error';
-import { CreateKanjiDto, UpdateKanjiDto, DeleteKanjiDto, KanjiDto } from './dtos';
+import { CreateKanjiDto, UpdateKanjiDto } from './dtos';
 
 @ApiTags('Kanji')
 @Controller('kanji')
@@ -20,7 +20,7 @@ export class KanjiController {
     async getKanji(@Param('id') id: number): Promise<Kanji | null> {
         const kanji = await this.kanjiService.findById(id);
         if (!kanji) {
-            throw new BadRequestException(ErrorCode.Not_Found);
+            throw new BadRequestException(ErrorCode.NotFound);
         }
         return kanji;
     }
@@ -29,7 +29,7 @@ export class KanjiController {
     async getByCharacter(@Param('character') character: string): Promise<Kanji | null> {
         const kanji = await this.kanjiService.findByCharacter(character);
         if (!kanji) {
-            throw new BadRequestException(ErrorCode.Not_Found);
+            throw new BadRequestException(ErrorCode.NotFound);
         }
         return kanji;
     }
@@ -38,7 +38,7 @@ export class KanjiController {
     async updateKanji(@Param('id') id: number, @Body() data: UpdateKanjiDto): Promise<Kanji | null> {
         const kanji = await this.kanjiService.updateAsync(id, data);
         if (!kanji) {
-            throw new BadRequestException(ErrorCode.Not_Found);
+            throw new BadRequestException(ErrorCode.NotFound);
         }
         return kanji;
     }
@@ -47,7 +47,7 @@ export class KanjiController {
     async createKanji(@Body() data: CreateKanjiDto): Promise<Kanji> {
         const existingKanji = await this.kanjiService.findByCharacter(data.character);
         if (existingKanji) {
-            throw new BadRequestException(ErrorCode.Already_Exists);
+            throw new BadRequestException(ErrorCode.AlreadyExists);
         }
         const kanji = await this.kanjiService.createAsync(data);
         return kanji;
@@ -57,7 +57,7 @@ export class KanjiController {
     async deleteKanji(@Param('id') id: number): Promise<Kanji> {
         const kanji = await this.kanjiService.deleteAsync(id);
         if (!kanji) {
-            throw new NotFoundException(ErrorCode.Not_Found);
+            throw new NotFoundException(ErrorCode.NotFound);
         }
         return kanji;
     }
