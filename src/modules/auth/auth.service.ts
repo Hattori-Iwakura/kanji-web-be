@@ -50,6 +50,9 @@ export class AuthService {
         id: user.id,
         account: user.account,
         email: user.email,
+        profile_image: user.profile_image,
+        is_first_login: user.is_first_login,
+        create_at: user.create_at,
         role: user.role 
       }, 
       expiresAt 

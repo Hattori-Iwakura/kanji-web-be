@@ -32,6 +32,17 @@ export class RegisterDto {
 }
 
 export class RefreshDto {
-  // if using cookie, no body needed
-  // keep class for explicitness if you accept cookie only
+  // cookie-based refresh, no body fields required
+}
+
+export class RefreshMobileDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  refreshToken: string;
 }
