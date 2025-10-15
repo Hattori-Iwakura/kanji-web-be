@@ -55,18 +55,19 @@ model UserSession {
 }
 
 model Kanji {
-  id           Int      @id @default(autoincrement())
-  character    String   @unique
-  onyomi       String?
-  kunyomi      String?
-  meanings     String
-  stroke_count Int?
-  jlpt         Int?
-  grade        Int?
-  frequency    Int?
-  radicals     String?
-  create_at    DateTime @default(now())
-  update_at    DateTime @updatedAt
+  id                   Int      @id @default(autoincrement())
+  character            String   @unique
+  onyomi               String?
+  kunyomi              String?
+  meanings             String
+  meaning_explanations String?
+  stroke_count         Int?
+  jlpt                 Int?
+  grade                Int?
+  frequency            Int?
+  radicals             String?
+  create_at            DateTime @default(now())
+  update_at            DateTime @updatedAt
 
   KanjiCollectionItems KanjiCollectionItems[]
 }

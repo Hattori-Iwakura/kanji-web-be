@@ -22,6 +22,11 @@ export class CreateKanjiDto {
     @IsString()
     meanings: string;
 
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    meaning_explanation?: string;
+
     @ApiProperty()
     @IsNotEmpty()
     @IsNumber()
@@ -79,6 +84,11 @@ export class UpdateKanjiDto {
     @IsOptional()
     @IsString()
     meanings?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    meaning_explanation?: string;
 
     @ApiPropertyOptional()
     @IsOptional()

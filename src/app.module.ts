@@ -1,49 +1,64 @@
-import { MiddlewareConsumer, Module, NestModule, ValidationPipe } from '@nestjs/common';
-import { AppService } from './app.service';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppConfigModule } from './modules/app_config/app_config.module';
-import { AppConfigService } from './modules/app_config/app_config.service';
-import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { LoggingInterceptor } from './interceptors/logging/logging.interceptor';
-import { LoggerModule } from './modules/logger/logger.module';
-import { RequestContextMiddleware } from './middlewares/request-context/request-context.middleware';
-import { TransformInterceptor } from './interceptors/transform/transform.interceptor';
+import { AuthModule } from './modules/auth/auth.module';
 import { DbClientModule } from './modules/db_client/db_client.module';
-import { UserModule } from './modules/user/user.module';
 import { KanjiModule } from './modules/kanji/kanji.module';
 import { KanjiListModule } from './modules/kanji_list/kanji_list.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { DbClient } from './modules/db_client/db_client.service';
+import { KanjiRecognitionModule } from './modules/kanji-recognition/kanji-recognition.module';
+import { AiModule } from './modules/ai/ai.module'; // Add this
+import { LoggerModule } from './modules/logger/logger.module';
+import { UserModule } from './modules/user/user.module';
+import { ExceptionResponseFilter } from './filters/exception-response/exception-response.filter';
+import { LoggingInterceptor } from './interceptors/logging/logging.interceptor';
+import { TransformInterceptor } from './interceptors/transform/transform.interceptor';
+import { RequestContextMiddleware } from './middlewares/request-context/request-context.middleware';
 
 @Module({
-  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule, KanjiListModule, AuthModule],
-  controllers: [],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
+    AppConfigModule,
+    DbClientModule,
+    LoggerModule,
+    AuthModule,
+    UserModule,
+    KanjiModule,
+    KanjiListModule,
+    KanjiRecognitionModule,
+    AiModule, // Add this
+  ],
   providers: [
-    DbClient,
-    AppService, 
-    AppConfigService,
     {
-      provide: APP_INTERCEPTOR,
-      useClass: LoggingInterceptor
+      provide: APP_FILTER,
+      useClass: ExceptionResponseFilter,
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: TransformInterceptor
+      useClass: LoggingInterceptor,
     },
     {
-      provide: APP_PIPE,
-      useFactory: () => 
-        new ValidationPipe({
-          whitelist: true,
-          forbidNonWhitelisted: true,
-          transform: true,
-        }),
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
+    {
+      provide: 'APP_GUARD',
+      useClass: ThrottlerGuard,
     },
   ],
 })
 export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestContextMiddleware)
-    .forRoutes('');
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestContextMiddleware).forRoutes('*');
   }
-
 }

@@ -24,8 +24,8 @@ async function adminCreate() {
 async function kanjiSeed() {
   // eslint-disable-next-line prettier/prettier
   const candidates = [
-    path.resolve(__dirname, 'data/kanji-merged.json'),
-    path.resolve(process.cwd(), 'prisma/data/kanji-merged.json'),
+    path.resolve(__dirname, 'data/kanji_hanviet.json'),
+    path.resolve(process.cwd(), 'prisma/data/kanji_hanviet.json'),
   ];
 
   const file = candidates.find((p) => fs.existsSync(p));
@@ -55,6 +55,11 @@ async function kanjiSeed() {
         meanings: Array.isArray(info.meanings)
           ? info.meanings.join(', ')
           : info.meanings ?? '',
+        meaning_explanations: info.meanings_explained
+          ? (Array.isArray(info.meanings_explained)
+              ? info.meanings_explained.join(', ')
+              : String(info.meanings_explained))
+          : null,
         stroke_count: typeof info.strokes === 'number' ? info.strokes : null,
         jlpt: info.jlpt_new ?? info.jlpt_old ?? null,
         grade: typeof info.grade === 'number' ? info.grade : null,

@@ -11,6 +11,9 @@ export class KanjiDto {
     meaning: string;
 
     @Expose()
+    meaning_explanation?: string;
+
+    @Expose()
     onyomi?: string;
 
     @Expose()
