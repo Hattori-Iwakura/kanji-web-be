@@ -34,6 +34,8 @@ model Users {
 
   sessions         UserSession[]
   KanjiCollections KanjiCollections[]
+  FlashcardDecks   FlashcardDeck[]
+  StudySessions    FlashcardStudySession[]
 }
 
 model UserSession {
@@ -70,6 +72,7 @@ model Kanji {
   update_at            DateTime @updatedAt
 
   KanjiCollectionItems KanjiCollectionItems[]
+  FlashcardCards       FlashcardCard[]
 }
 
 model KanjiCollections {
@@ -103,4 +106,91 @@ model KanjiCollectionItems {
   @@unique([collection_id, kanji_id])
   @@index([collection_id])
   @@index([kanji_id])
+}
+
+// ==================== Flashcard Models ====================
+
+model FlashcardDeck {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  user_id     Int
+  source_type String   @default("custom") // "custom", "kanji_list"
+  source_id   Int? // KanjiCollections.id if source_type = "kanji_list"
+  is_public   Boolean  @default(false)
+  total_cards Int      @default(0)
+  cards_due   Int      @default(0)
+  cards_new   Int      @default(0)
+  create_at   DateTime @default(now())
+  update_at   DateTime @updatedAt
+
+  User          Users                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Cards         FlashcardCard[]
+  StudySessions FlashcardStudySession[]
+
+  @@index([user_id])
+  @@index([source_type])
+}
+
+model FlashcardCard {
+  id               Int       @id @default(autoincrement())
+  deck_id          Int
+  kanji_id         Int
+  front_content    String // Kanji character
+  back_content     String // Meanings, readings (JSON)
+  difficulty       Int       @default(0) // 0-5 scale
+  next_review_at   DateTime  @default(now())
+  interval_days    Int       @default(1) // Days until next review
+  ease_factor      Float     @default(2.5) // SM-2 algorithm
+  repetitions      Int       @default(0) // Number of successful reviews
+  last_reviewed_at DateTime?
+  is_new           Boolean   @default(true)
+  create_at        DateTime  @default(now())
+  update_at        DateTime  @updatedAt
+
+  Deck    FlashcardDeck     @relation(fields: [deck_id], references: [id], onDelete: Cascade)
+  Kanji   Kanji             @relation(fields: [kanji_id], references: [id], onDelete: Cascade)
+  Reviews FlashcardReview[]
+
+  @@unique([deck_id, kanji_id])
+  @@index([deck_id])
+  @@index([next_review_at])
+  @@index([kanji_id])
+  @@index([is_new])
+}
+
+model FlashcardReview {
+  id         Int      @id @default(autoincrement())
+  card_id    Int
+  session_id Int
+  rating     Int // 0-5 (0=again, 1=hard, 2=good, 3=easy, 4=very easy, 5=perfect)
+  time_spent Int // Seconds
+  create_at  DateTime @default(now())
+
+  Card    FlashcardCard         @relation(fields: [card_id], references: [id], onDelete: Cascade)
+  Session FlashcardStudySession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([card_id])
+  @@index([session_id])
+}
+
+model FlashcardStudySession {
+  id            Int      @id @default(autoincrement())
+  deck_id       Int
+  user_id       Int
+  cards_studied Int      @default(0)
+  cards_correct Int      @default(0)
+  cards_wrong   Int      @default(0)
+  total_time    Int      @default(0) // Seconds
+  completed     Boolean  @default(false)
+  create_at     DateTime @default(now())
+  update_at     DateTime @updatedAt
+
+  Deck    FlashcardDeck     @relation(fields: [deck_id], references: [id], onDelete: Cascade)
+  User    Users             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Reviews FlashcardReview[]
+
+  @@index([deck_id])
+  @@index([user_id])
+  @@index([create_at])
 }

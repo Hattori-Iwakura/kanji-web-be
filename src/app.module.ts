@@ -9,6 +9,7 @@ import { KanjiModule } from './modules/kanji/kanji.module';
 import { KanjiListModule } from './modules/kanji_list/kanji_list.module';
 import { KanjiRecognitionModule } from './modules/kanji-recognition/kanji-recognition.module';
 import { AiModule } from './modules/ai/ai.module'; // Add this
+import { FlashcardModule } from './modules/flashcard/flashcard.module';
 import { LoggerModule } from './modules/logger/logger.module';
 import { UserModule } from './modules/user/user.module';
 import { ExceptionResponseFilter } from './filters/exception-response/exception-response.filter';
@@ -36,6 +37,7 @@ import { RequestContextMiddleware } from './middlewares/request-context/request-
     KanjiModule,
     KanjiListModule,
     KanjiRecognitionModule,
+    FlashcardModule,
     AiModule, // Add this
   ],
   providers: [

@@ -16,6 +16,7 @@ async function adminCreate() {
       is_system: true,
       is_first_login: false,
       is_active: true,
+      role: 'ADMIN',
       email: 'admin@gmail.com',
     },
   });
