@@ -7,6 +7,10 @@ import { CreateKanjiDto, UpdateKanjiDto } from "./dtos";
 export class KanjiRepository {
     constructor(private readonly dbClient: DbClient) {}
 
+    get db() {
+        return this.dbClient;
+    }
+
     async fetchAllAsync(): Promise<Kanji[]> {
         return this.dbClient.kanji.findMany();
     }

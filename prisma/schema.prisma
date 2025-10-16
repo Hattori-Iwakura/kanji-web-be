@@ -42,6 +42,8 @@ model Users {
   KanjiCollections KanjiCollections[]
   FlashcardDecks   FlashcardDeck[]
   StudySessions    FlashcardStudySession[]
+  KanjiProgress    KanjiProgress[]
+  KanjiLists       KanjiList[]
 }
 
 model UserSession {
@@ -74,11 +76,88 @@ model Kanji {
   grade                Int?
   frequency            Int?
   radicals             String?
+  stroke_order         Json? // Array of SVG path data for each stroke
+  components           Json? // Array of kanji components/parts
   create_at            DateTime @default(now())
   update_at            DateTime @updatedAt
 
   KanjiCollectionItems KanjiCollectionItems[]
   FlashcardCards       FlashcardCard[]
+  Examples             KanjiExample[]
+  Progress             KanjiProgress[]
+  ListItems            KanjiListItem[]
+}
+
+// Kanji example words/compounds
+model KanjiExample {
+  id         Int      @id @default(autoincrement())
+  kanji_id   Int
+  word       String
+  reading    String
+  meaning    String
+  word_type  String? // "noun", "verb", "adjective", etc.
+  jlpt_level Int?
+  frequency  Int?
+  create_at  DateTime @default(now())
+
+  Kanji Kanji @relation(fields: [kanji_id], references: [id], onDelete: Cascade)
+
+  @@index([kanji_id])
+  @@index([jlpt_level])
+}
+
+// User's kanji learning progress
+model KanjiProgress {
+  id             Int       @id @default(autoincrement())
+  user_id        Int
+  kanji_id       Int
+  status         String    @default("new") // "new", "learning", "known", "mastered"
+  times_reviewed Int       @default(0)
+  times_correct  Int       @default(0)
+  last_reviewed  DateTime?
+  first_learned  DateTime  @default(now())
+  mastered_at    DateTime?
+  create_at      DateTime  @default(now())
+  update_at      DateTime  @updatedAt
+
+  User  Users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Kanji Kanji @relation(fields: [kanji_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, kanji_id])
+  @@index([user_id, status])
+  @@index([kanji_id])
+}
+
+// User's custom kanji lists
+model KanjiList {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  name        String
+  description String?
+  is_public   Boolean  @default(false)
+  create_at   DateTime @default(now())
+  update_at   DateTime @updatedAt
+
+  User  Users           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Items KanjiListItem[]
+
+  @@index([user_id])
+}
+
+model KanjiListItem {
+  id          Int      @id @default(autoincrement())
+  list_id     Int
+  kanji_id    Int
+  order_index Int
+  notes       String?
+  added_at    DateTime @default(now())
+
+  List  KanjiList @relation(fields: [list_id], references: [id], onDelete: Cascade)
+  Kanji Kanji     @relation(fields: [kanji_id], references: [id], onDelete: Cascade)
+
+  @@unique([list_id, kanji_id])
+  @@index([list_id, order_index])
+  @@index([kanji_id])
 }
 
 model KanjiCollections {
