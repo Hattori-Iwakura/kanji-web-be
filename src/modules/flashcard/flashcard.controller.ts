@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  BadRequestException,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -24,6 +25,8 @@ import { UpdateDeckDto } from './dto/update-deck.dto';
 import { AddCardDto } from './dto/add-card.dto';
 import { ReviewCardDto } from './dto/review-card.dto';
 import { StartStudyDto } from './dto/start-study.dto';
+import { ReorderCardsDto } from './dto/reorder-cards.dto';
+import { BulkAddCardsDto } from './dto/bulk-add-cards.dto';
 
 @ApiTags('Flashcard')
 @Controller('flashcard')
@@ -103,6 +106,15 @@ export class FlashcardController {
     return this.flashcardService.addCardToDeck(deckId, userId, addCardDto);
   }
 
+  @Get('cards/:cardId')
+  @ApiOperation({ summary: 'Get card by ID' })
+  @ApiResponse({ status: 200, description: 'Card retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Card not found' })
+  getCardDetail(@Req() req, @Param('cardId', ParseIntPipe) cardId: number) {
+    const userId = req.user?.id || 1;
+    return this.flashcardService.getCardDetail(cardId, userId);
+  }
+
   @Delete('cards/:cardId')
   @ApiOperation({ summary: 'Remove card from deck' })
   @ApiResponse({ status: 200, description: 'Card removed successfully' })
@@ -161,15 +173,105 @@ export class FlashcardController {
     return this.flashcardService.completeSession(sessionId, userId);
   }
 
+  @Post('sessions/:sessionId/pause')
+  @ApiOperation({ summary: 'Pause active study session' })
+  @ApiResponse({ status: 200, description: 'Session paused successfully' })
+  pauseSession(
+    @Req() req: any,
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+  ) {
+    const userId = req.user?.id || 1;
+    return this.flashcardService.pauseSession(sessionId, userId);
+  }
+
+  @Post('sessions/:sessionId/resume')
+  @ApiOperation({ summary: 'Resume paused study session' })
+  @ApiResponse({ status: 200, description: 'Session resumed successfully' })
+  resumeSession(
+    @Req() req: any,
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+  ) {
+    const userId = req.user?.id || 1;
+    return this.flashcardService.resumeSession(sessionId, userId);
+  }
+
+  @Get('sessions/active')
+  @ApiOperation({ summary: 'List active or paused study sessions' })
+  @ApiResponse({ status: 200, description: 'Active sessions retrieved successfully' })
+  getActiveSessions(
+    @Req() req: any,
+    @Query('deckId') deckIdParam?: string,
+  ) {
+    const userId = req.user?.id || 1;
+    const deckId = this.parseDeckId(deckIdParam);
+    return this.flashcardService.getActiveSessions(userId, deckId);
+  }
+
+  @Get('sessions/:sessionId')
+  @ApiOperation({ summary: 'Get detailed session data' })
+  @ApiResponse({ status: 200, description: 'Session data retrieved successfully' })
+  getSessionDetail(
+    @Req() req: any,
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+  ) {
+    const userId = req.user?.id || 1;
+    return this.flashcardService.getSessionDetail(sessionId, userId);
+  }
+
   @Get('history')
   @ApiOperation({ summary: 'Get study history' })
   @ApiResponse({ status: 200, description: 'History retrieved successfully' })
   getStudyHistory(
     @Req() req: any,
-    @Query('deckId', new ParseIntPipe({ optional: true })) deckId?: number,
+    @Query('deckId') deckIdParam?: string,
   ) {
     const userId = req.user?.id || 1;
+    const deckId = this.parseDeckId(deckIdParam);
     return this.flashcardService.getStudyHistory(userId, deckId);
-    return this.flashcardService.getStudyHistory(req.user.id, deckId);
+  }
+
+  @Put('decks/:deckId/reorder')
+  reorderCards(
+    @Req() req,
+    @Param('deckId', ParseIntPipe) deckId: number,
+    @Body() body: ReorderCardsDto,
+  ) {
+    const userId = req.user?.id || 1;
+    return this.flashcardService.reorderCards(deckId, userId, body.cardIds);
+  }
+
+  @Post('decks/:deckId/cards/bulk')
+  bulkAddCards(
+    @Req() req,
+    @Param('deckId', ParseIntPipe) deckId: number,
+    @Body() body: BulkAddCardsDto,
+  ) {
+    const userId = req.user?.id || 1;
+    return this.flashcardService.bulkAddCards(deckId, userId, body.kanjiIds);
+  }
+
+  @Get('stats')
+  getStats(@Req() req, @Query('deckId') deckIdParam?: string) {
+    const userId = req.user?.id || 1;
+    const deckId = this.parseDeckId(deckIdParam);
+    return this.flashcardService.getStats(userId, deckId);
+  }
+
+  private parseDeckId(deckIdParam?: string): number | undefined {
+    if (deckIdParam === undefined || deckIdParam === null) {
+      return undefined;
+    }
+
+    const trimmed = deckIdParam.trim();
+    if (trimmed.length === 0) {
+      return undefined;
+    }
+
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isNaN(parsed)) {
+      throw new BadRequestException('deckId must be an integer');
+    }
+
+    return parsed;
   }
 }

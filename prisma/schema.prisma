@@ -19,6 +19,12 @@ enum UserRole {
   USER
 }
 
+enum StudySessionStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
 model Users {
   id             Int      @id @default(autoincrement())
   account        String   @unique
@@ -139,6 +145,7 @@ model FlashcardCard {
   front_content    String // Kanji character
   back_content     String // Meanings, readings (JSON)
   difficulty       Int       @default(0) // 0-5 scale
+  order_index      Int       @default(0)
   next_review_at   DateTime  @default(now())
   interval_days    Int       @default(1) // Days until next review
   ease_factor      Float     @default(2.5) // SM-2 algorithm
@@ -154,6 +161,7 @@ model FlashcardCard {
 
   @@unique([deck_id, kanji_id])
   @@index([deck_id])
+  @@index([order_index])
   @@index([next_review_at])
   @@index([kanji_id])
   @@index([is_new])
@@ -175,16 +183,23 @@ model FlashcardReview {
 }
 
 model FlashcardStudySession {
-  id            Int      @id @default(autoincrement())
+  id            Int                @id @default(autoincrement())
   deck_id       Int
   user_id       Int
-  cards_studied Int      @default(0)
-  cards_correct Int      @default(0)
-  cards_wrong   Int      @default(0)
-  total_time    Int      @default(0) // Seconds
-  completed     Boolean  @default(false)
-  create_at     DateTime @default(now())
-  update_at     DateTime @updatedAt
+  cards_studied Int                @default(0)
+  cards_correct Int                @default(0)
+  cards_wrong   Int                @default(0)
+  total_time    Int                @default(0) // Seconds
+  completed     Boolean            @default(false)
+  status        StudySessionStatus @default(ACTIVE)
+  cards_total   Int                @default(0)
+  current_index Int                @default(0)
+  card_order    Json?
+  settings      Json?
+  paused_at     DateTime?
+  completed_at  DateTime?
+  create_at     DateTime           @default(now())
+  update_at     DateTime           @updatedAt
 
   Deck    FlashcardDeck     @relation(fields: [deck_id], references: [id], onDelete: Cascade)
   User    Users             @relation(fields: [user_id], references: [id], onDelete: Cascade)
