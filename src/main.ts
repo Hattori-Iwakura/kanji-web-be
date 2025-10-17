@@ -26,7 +26,16 @@ async function bootstrap() {
     credentials: true, // allow cookies
   });
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
   app.useGlobalFilters(new ExceptionResponseFilter(logger));
   app.setGlobalPrefix('api');
 

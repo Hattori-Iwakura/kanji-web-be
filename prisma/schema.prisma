@@ -25,6 +25,19 @@ enum StudySessionStatus {
   COMPLETED
 }
 
+enum QuizQuestionType {
+  MULTIPLE_CHOICE
+  FILL_IN_BLANK
+  DRAWING
+}
+
+enum QuizDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
 model Users {
   id             Int      @id @default(autoincrement())
   account        String   @unique
@@ -44,6 +57,8 @@ model Users {
   StudySessions    FlashcardStudySession[]
   KanjiProgress    KanjiProgress[]
   KanjiLists       KanjiList[]
+  Quizzes          Quiz[]
+  QuizAttempts     QuizAttempt[]
 }
 
 model UserSession {
@@ -287,4 +302,89 @@ model FlashcardStudySession {
   @@index([deck_id])
   @@index([user_id])
   @@index([create_at])
+}
+
+model Quiz {
+  id          Int            @id @default(autoincrement())
+  user_id     Int
+  title       String
+  description String?
+  difficulty  QuizDifficulty @default(BEGINNER)
+  category    String? // e.g., "JLPT N5", "Kanji Grade 1", "Vocabulary"
+  tags        String[]       @default([])
+  is_public   Boolean        @default(false)
+  create_at   DateTime       @default(now())
+  update_at   DateTime       @updatedAt
+
+  User      Users         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Questions Question[]
+  Attempts  QuizAttempt[]
+
+  @@index([user_id])
+  @@index([category])
+  @@index([difficulty])
+  @@index([is_public])
+}
+
+model Question {
+  id             Int              @id @default(autoincrement())
+  quiz_id        Int
+  type           QuizQuestionType
+  question       String // The question text
+  correct_answer String // For MULTIPLE_CHOICE: the correct option key (A/B/C/D), FILL_IN_BLANK: the answer, DRAWING: the kanji character
+  options        Json? // For MULTIPLE_CHOICE: {A: "option1", B: "option2", ...}
+  metadata       Json? // For DRAWING: {hint: "...", strokeCount: 5}, FILL_IN_BLANK: {blankPosition: 2}
+  order_index    Int              @default(0)
+  points         Int              @default(1)
+  time_limit     Int? // Seconds (optional)
+  explanation    String? // Explanation shown after answering
+  create_at      DateTime         @default(now())
+  update_at      DateTime         @updatedAt
+
+  Quiz    Quiz         @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  Answers QuizAnswer[]
+
+  @@index([quiz_id])
+  @@index([type])
+  @@index([order_index])
+}
+
+model QuizAttempt {
+  id           Int       @id @default(autoincrement())
+  user_id      Int
+  quiz_id      Int
+  score        Int       @default(0)
+  max_score    Int       @default(0)
+  started_at   DateTime  @default(now())
+  completed_at DateTime?
+  time_spent   Int       @default(0) // Total seconds spent
+  is_completed Boolean   @default(false)
+
+  User    Users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Quiz    Quiz         @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  Answers QuizAnswer[]
+
+  @@index([user_id])
+  @@index([quiz_id])
+  @@index([started_at])
+  @@index([is_completed])
+}
+
+model QuizAnswer {
+  id          Int      @id @default(autoincrement())
+  attempt_id  Int
+  question_id Int
+  user_answer String // User's answer (option key, text, or recognized kanji)
+  is_correct  Boolean  @default(false)
+  points      Int      @default(0)
+  time_spent  Int      @default(0) // Seconds for this question
+  metadata    Json? // For DRAWING: {confidence: 0.95, predictions: [...]}
+  answered_at DateTime @default(now())
+
+  Attempt  QuizAttempt @relation(fields: [attempt_id], references: [id], onDelete: Cascade)
+  Question Question    @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  @@index([attempt_id])
+  @@index([question_id])
+  @@index([is_correct])
 }

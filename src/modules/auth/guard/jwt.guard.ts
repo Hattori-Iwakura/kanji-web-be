@@ -10,14 +10,29 @@ export class JwtGuard implements CanActivate {
     const authHeader = req.headers['authorization'] as string;
     const token = authHeader?.replace(/^Bearer\s+/i, '') ?? null;
 
-    if (!token) throw new UnauthorizedException();
+    console.log('🔑 JWT Guard - Authorization header:', authHeader ? `Bearer ${authHeader.substring(7, 20)}...` : 'MISSING');
+
+    if (!token) {
+      console.log('❌ JWT Guard - No token provided');
+      throw new UnauthorizedException('No token provided');
+    }
 
     const payload = await this.auth.validateAccessToken(token);
-    if (!payload) throw new UnauthorizedException();
+    if (!payload) {
+      console.log('❌ JWT Guard - Invalid token');
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    console.log('✅ JWT Guard - Token valid, payload:', { sub: payload.sub, sid: payload.sid, role: payload.role });
 
     // ensure session is valid
     const session = await this.auth.validateSessionBySid(payload.sid);
-    if (!session) throw new UnauthorizedException();
+    if (!session) {
+      console.log('❌ JWT Guard - Session not found or expired for sid:', payload.sid);
+      throw new UnauthorizedException('Session not found or expired');
+    }
+
+    console.log('✅ JWT Guard - Session valid');
 
     req.user = { id: payload.sub, role: payload.role };
     return true;
