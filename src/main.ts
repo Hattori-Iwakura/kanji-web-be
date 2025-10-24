@@ -7,12 +7,19 @@ import { ExceptionResponseFilter } from './filters/exception-response/exception-
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
 
   const logger = await app.resolve(LoggerService);
   app.useLogger(logger);
+
+  // Serve static files (for uploaded avatars)
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   // security headers
   app.use(helmet());
@@ -33,6 +40,24 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transformOptions: {
         enableImplicitConversion: true,
+      },
+      // Enable detailed error messages
+      disableErrorMessages: false,
+      validationError: {
+        target: false,
+        value: true,
+      },
+      exceptionFactory: (errors) => {
+        // Log validation errors for debugging
+        console.error('❌ Validation Errors:', JSON.stringify(errors, null, 2));
+        const messages = errors.map((error) => {
+          return {
+            field: error.property,
+            errors: Object.values(error.constraints || {}),
+          };
+        });
+        console.error('📝 Formatted errors:', JSON.stringify(messages, null, 2));
+        return new ValidationPipe().createExceptionFactory()(errors);
       },
     }),
   );

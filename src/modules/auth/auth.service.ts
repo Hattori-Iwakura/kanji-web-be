@@ -1,123 +1,93 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { DbClient } from '../db_client/db_client.service';
-import { randomToken, hashToken, verifyPassword } from '../../utils/hash.util';
+﻿import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { add } from 'date-fns/add';
-import { ErrorCode } from 'src/shared/error';
+import * as bcrypt from 'bcryptjs';
+import { PrismaService } from '../../shared/services/prisma.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly db: DbClient, private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
 
-  async login(account: string, password: string, ip?: string, ua?: string) {
-    const user = await this.db.users.findFirst({
-      where: {
-        OR: [
-          { account: account },
-        ]
-      }
-    });
-    if (!user) throw new UnauthorizedException(ErrorCode.Unauthorized);
-
-    const ok = await verifyPassword(password, user.hash_password);
-    if (!ok) throw new UnauthorizedException(ErrorCode.Unauthorized);
-
-    // create session + refresh token
-    const sessionId = randomToken(32);
-    const refreshPlain = randomToken(64);
-    const refreshHash = hashToken(refreshPlain);
-    const expiresAt = add(new Date(), { days: Number(process.env.JWT_REFRESH_EXPIRES_DAYS || 30) });
-
-    await this.db.userSession.create({
-      data: {
-        sessionId,
-        userId: user.id,
-        refreshTokenHash: refreshHash,
-        ip,
-        userAgent: ua,
-        expiresAt,
-      }
-    });
-
-    const payload = { sub: user.id, sid: sessionId, role: user.role };
-    const accessToken = await this.jwtService.signAsync(payload);
-
-    return { 
-      accessToken,
-      refreshToken: refreshPlain,
-      sessionId,
-      user: { 
-        id: user.id,
-        account: user.account,
-        email: user.email,
-        profile_image: user.profile_image,
-        is_first_login: user.is_first_login,
-        create_at: user.create_at,
-        role: user.role 
-      }, 
-      expiresAt 
-    };
-  }
-
-  async validateAccessToken(token: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync(token);
-      return payload as { sub: number; sid: string; role: string; iat?: number; exp?: number };
-    } catch {
-      return null;
-    }
-  }
-
-  async validateSessionBySid(sid: string) {
-    if (!sid) return null;
-    const s = await this.db.userSession.findUnique({ where: { sessionId: sid }, include: { user: true }});
-    if (!s || s.revoked) return null;
-    if (s.expiresAt < new Date()) return null;
-    return s;
-  }
-
-  async refresh(sessionId: string, refreshToken: string) {
-    const session = await this.db.userSession.findUnique({ where: { sessionId }, include: { user: true }});
-    if (!session || session.revoked) throw new UnauthorizedException();
-
-    const incomingHash = hashToken(refreshToken);
-    if (incomingHash !== session.refreshTokenHash) {
-      // compromise -> revoke all user's sessions
-      await this.db.userSession.updateMany({ where: { userId: session.userId }, data: { revoked: true }});
-      throw new UnauthorizedException('Refresh token invalid; sessions revoked.');
+  async register(email: string, password: string, name?: string) {
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new ConflictException('Email already exists');
     }
 
-    // rotate refresh token
-    const newRefresh = randomToken(64);
-    const newHash = hashToken(newRefresh);
-    const newExpires = add(new Date(), { days: Number(process.env.JWT_REFRESH_EXPIRES_DAYS || 30) });
-
-    await this.db.userSession.update({
-      where: { id: session.id },
-      data: { 
-        refreshTokenHash: newHash,
-        expiresAt: newExpires,
-        lastActiveAt: new Date() }
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await this.prisma.user.create({
+      data: { email, passwordHash, name, role: 'USER' },
     });
 
-    const payload = { 
-      sub: session.userId,
-      sid: session.sessionId,
-      role: session.user.role 
-    };
-
-    const newAccess = await this.jwtService.signAsync(payload);
-
-    return { 
-      accessToken: newAccess,
-      refreshToken: newRefresh,
-      expiresAt: newExpires 
+    const { passwordHash: _, ...result } = user;
+    return {
+      user: result,
+      accessToken: this.generateToken(user.id, user.role),
     };
   }
 
-  async logout(sessionId: string) {
-    await this.db.userSession.updateMany(
-      { where: { sessionId }, data: { revoked: true }}
-    );
+  async login(email: string, password: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    
+    if (!ok) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    
+    const { passwordHash: _, ...result } = user;
+    return {
+      user: result,
+      accessToken: this.generateToken(user.id, user.role),
+    };
+  }
+
+  async getProfile(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        profileImage: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return user;
+  }
+
+  async updateProfile(userId: number, data: { name?: string; profileImage?: string }) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        profileImage: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return user;
+  }
+
+  private generateToken(userId: number, role: string): string {
+    return this.jwtService.sign({ sub: userId, role });
   }
 }

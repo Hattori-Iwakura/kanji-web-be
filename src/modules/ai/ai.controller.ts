@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AiService } from './ai.service';
-import { JwtGuard } from '../auth/guard/jwt.guard';
 import { PredictKanjiDto, PredictResultDto, AiHealthDto } from './dtos/ai.dto';
 
 @ApiTags('AI')

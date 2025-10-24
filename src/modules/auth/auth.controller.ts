@@ -1,90 +1,61 @@
-import { Controller, Post, Body, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, Req, Res, UseGuards, Get, Patch } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, RefreshMobileDto } from './dtos';
+import { 
+  LoginDto, 
+  RegisterDto, 
+} from './dtos';
 import { Request, Response } from 'express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from './guard/jwt-auth.guard';
 
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    // private readonly passwordService: PasswordService,
+    // private readonly twoFactorService: TwoFactorService,
+  ) {}
 
   @Post('login')
-  async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const ip = req.ip;
-    const ua = req.headers['user-agent'] ?? '';
-    const r = await this.auth.login(dto.account, dto.password, ip, ua);
-
-    // Check if mobile request (can check user-agent or custom header)
-    const isMobile = req.headers['x-platform'] === 'mobile' || 
-                     req.headers['user-agent']?.includes('Dart') ||
-                     req.body?.platform === 'mobile';
-
-    if (isMobile) {
-      // For mobile: return everything in response body
-      return { 
-        accessToken: r.accessToken, 
-        refreshToken: r.refreshToken,
-        sessionId: r.sessionId,
-        user: r.user, 
-        expiresAt: r.expiresAt 
-      };
-    }
-
-    // For web: set cookies
-    res.cookie('refresh_token', r.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      path: '/auth/refresh'
-    });
-
-    res.cookie('session_id', r.sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-    });
-
-    // return access token (frontend store in memory or localStorage)
-    return { accessToken: r.accessToken, user: r.user, expiresAt: r.expiresAt };
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({ status: 200, description: 'Login successful, returns access token and user info' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async login(@Body() dto: LoginDto) {
+    // LoginDto uses 'account' which can be email
+    const result = await this.auth.login(dto.account, dto.password);
+    return result;  // Don't wrap - let interceptor handle it
   }
 
-  @Post('refresh')
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const sessionId = req.cookies['session_id'];
-    const refresh = req.cookies['refresh_token'];
-    const r = await this.auth.refresh(sessionId, refresh);
-
-    // rotate cookie for refresh token
-    res.cookie('refresh_token', r.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      path: '/auth/refresh'
-    });
-
-    return { accessToken: r.accessToken, expiresAt: r.expiresAt };
+  @Post('register')
+  @ApiOperation({ summary: 'Register a new user account' })
+  @ApiResponse({ status: 201, description: 'User registered successfully' })
+  @ApiResponse({ status: 409, description: 'Email already exists' })
+  async register(@Body() dto: RegisterDto) {
+    // RegisterDto has email, password, and account
+    const result = await this.auth.register(dto.email, dto.password);
+    return result;  // Don't wrap - let interceptor handle it
   }
 
-  @Post('refresh/mobile')
-  async refreshMobile(@Body() dto: RefreshMobileDto) {
-    const r = await this.auth.refresh(dto.sessionId, dto.refreshToken);
-    return {
-      accessToken: r.accessToken,
-      refreshToken: r.refreshToken,
-      expiresAt: r.expiresAt,
-    };
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
+  async getProfile(@Req() req: any) {
+    const userId = req.user?.id;
+    const result = await this.auth.getProfile(userId);
+    return result;  // Don't wrap - let interceptor handle it
   }
 
-  @Post('logout')
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const sessionId = req.cookies['session_id'] ?? req.body?.session_id ?? req.body?.sessionId;
-    if (sessionId) {
-      await this.auth.logout(sessionId);
-    }
-    res.clearCookie('session_id');
-    res.clearCookie('refresh_token');
-    return { ok: true };
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  async updateProfile(@Req() req: any, @Body() updateData: { name?: string; profileImage?: string }) {
+    const userId = req.user?.id;
+    const result = await this.auth.updateProfile(userId, updateData);
+    return result;  // Don't wrap - let interceptor handle it
   }
 }

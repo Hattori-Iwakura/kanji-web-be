@@ -1,94 +1,94 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { PrismaClient } from '../generated/prisma';
-import { Hasher } from '../src/shared/utils';
-import * as fs from 'fs';
-import * as path from 'path';
+﻿import { PrismaClient } from '../generated/prisma';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-async function adminCreate() {
-  const admin = await prisma.users.upsert({
-    where: { account: 'admin' },
-    update: { is_system: true },
+async function main() {
+  console.log('Seeding database...');
+  
+  // Create main admin account
+  const adminPassword = await bcrypt.hash('admin123', 10);
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@kanji.app' },
+    update: {},
     create: {
-      account: 'admin',
-      hash_password: await Hasher.hash('123456'),
-      is_system: true,
-      is_first_login: false,
-      is_active: true,
+      email: 'admin@kanji.app',
+      passwordHash: adminPassword,
+      name: 'Admin',
       role: 'ADMIN',
-      email: 'admin@gmail.com',
     },
   });
-}
-
-async function kanjiSeed() {
-  // eslint-disable-next-line prettier/prettier
-  const candidates = [
-    path.resolve(__dirname, 'data/kanji_hanviet.json'),
-    path.resolve(process.cwd(), 'prisma/data/kanji_hanviet.json'),
+  console.log('Admin user created:', admin.email);
+  
+  // Create test admin account for integration tests
+  const testAdminPassword = await bcrypt.hash('Admin@123456', 10);
+  const testAdmin = await prisma.user.upsert({
+    where: { email: 'admin@example.com' },
+    update: {},
+    create: {
+      email: 'admin@example.com',
+      passwordHash: testAdminPassword,
+      name: 'Test Admin',
+      role: 'ADMIN',
+    },
+  });
+  console.log('Test admin user created:', testAdmin.email);
+  
+  const kanjiData = [
+    { character: '一', meanings: 'one', onyomi: 'イチ、イツ', kunyomi: 'ひと.つ', jlpt: 5, grade: 1, strokeCount: 1, frequency: 1 },
+    { character: '二', meanings: 'two', onyomi: 'ニ', kunyomi: 'ふた.つ', jlpt: 5, grade: 1, strokeCount: 2, frequency: 9 },
+    { character: '三', meanings: 'three', onyomi: 'サン', kunyomi: 'み.つ', jlpt: 5, grade: 1, strokeCount: 3, frequency: 11 },
+    { character: '日', meanings: 'day, sun, Japan', onyomi: 'ニチ、ジツ', kunyomi: 'ひ、か', jlpt: 5, grade: 1, strokeCount: 4, frequency: 2 },
+    { character: '月', meanings: 'month, moon', onyomi: 'ゲツ、ガツ', kunyomi: 'つき', jlpt: 5, grade: 1, strokeCount: 4, frequency: 12 },
   ];
-
-  const file = candidates.find((p) => fs.existsSync(p));
-  if (!file) {
-    console.warn(
-      '⚠️  Không tìm thấy file kanji-merged.json hoặc kanji-merged-fixed.json — bỏ qua seed Kanji.',
-    );
-    return;
-  }
-
-  const raw = fs.readFileSync(file, 'utf-8');
-  const data = JSON.parse(raw) as Record<string, any>;
-
-  let inserted = 0;
-  for (const [char, info] of Object.entries(data)) {
+  
+  for (const k of kanjiData) {
     await prisma.kanji.upsert({
-      where: { character: char },
+      where: { character: k.character },
       update: {},
-      create: {
-        character: char,
-        onyomi: Array.isArray(info.readings_on)
-          ? info.readings_on.join(', ')
-          : info.readings_on ?? null,
-        kunyomi: Array.isArray(info.readings_kun)
-          ? info.readings_kun.join(', ')
-          : info.readings_kun ?? null,
-        meanings: Array.isArray(info.meanings)
-          ? info.meanings.join(', ')
-          : info.meanings ?? '',
-        meaning_explanations: info.meanings_explained
-          ? (Array.isArray(info.meanings_explained)
-              ? info.meanings_explained.join(', ')
-              : String(info.meanings_explained))
-          : null,
-        stroke_count: typeof info.strokes === 'number' ? info.strokes : null,
-        jlpt: info.jlpt_new ?? info.jlpt_old ?? null,
-        grade: typeof info.grade === 'number' ? info.grade : null,
-        frequency: typeof info.freq === 'number' ? info.freq : null,
-        radicals: Array.isArray(info.wk_radicals)
-          ? info.wk_radicals.join(', ')
-          : info.wk_radicals ?? null,
-      },
+      create: k,
     });
-
-    inserted++;
-    if (inserted % 500 === 0) console.log(`Inserted ${inserted} kanji...`);
   }
-
-  console.log(`✅ Import Kanji hoàn tất! tổng: ${inserted}`);
-}
-
-async function main() {
-  // Seed admin user
-  await adminCreate();
-  await kanjiSeed();
+  console.log('Kanji created:', kanjiData.length);
+  
+  // Create system JLPT lists
+  const jlptLevels = [5, 4, 3, 2, 1];
+  for (const level of jlptLevels) {
+    const listName = `JLPT N${level} Kanji`;
+    const existingList = await prisma.kanjiList.findFirst({
+      where: { name: listName },
+    });
+    
+    if (!existingList) {
+      // Get all kanji for this JLPT level
+      const jlptKanji = await prisma.kanji.findMany({
+        where: { jlpt: level },
+        orderBy: { frequency: 'asc' },
+      });
+      
+      const list = await prisma.kanjiList.create({
+        data: {
+          name: listName,
+          description: `Official JLPT N${level} kanji list`,
+          userId: null, // System list (no owner)
+          isPublic: true,
+          items: {
+            create: jlptKanji.map((k, index) => ({
+              kanjiId: k.id,
+              order: index,
+            })),
+          },
+        },
+      });
+      console.log(`Created system list: ${listName} (${jlptKanji.length} kanji)`);
+    } else {
+      console.log(`System list already exists: ${listName}`);
+    }
+  }
+  
+  console.log('Seeding completed!');
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch((e) => { console.error('Seeding failed:', e); process.exit(1); })
+  .finally(async () => { await prisma.$disconnect(); });

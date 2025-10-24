@@ -1,12 +1,11 @@
-import { Module } from '@nestjs/common';
-import { KanjiController } from './kanji.controller';
+﻿import { Module } from '@nestjs/common';
 import { KanjiService } from './kanji.service';
-import { KanjiRepository } from './kanji.repo';
-import { AuthModule } from '../auth/auth.module';
+import { KanjiController } from './kanji.controller';
+import { PrismaService } from '../../shared/services/prisma.service';
 
 @Module({
-  imports: [AuthModule],
   controllers: [KanjiController],
-  providers: [KanjiService, KanjiRepository]
+  providers: [KanjiService, PrismaService],
+  exports: [KanjiService],
 })
 export class KanjiModule {}

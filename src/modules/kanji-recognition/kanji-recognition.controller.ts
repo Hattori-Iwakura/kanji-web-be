@@ -14,7 +14,6 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { KanjiRecognitionService } from './kanji-recognition.service';
-import { JwtGuard } from '../auth/guard/jwt.guard';
 import { RecognizeKanjiDto, RecognitionResultDto } from './dtos';
 
 @ApiTags('Kanji Recognition')
@@ -25,7 +24,6 @@ export class KanjiRecognitionController {
   ) {}
 
   @Post('recognize')
-  @UseGuards(JwtGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Recognize kanji from canvas drawing' })

@@ -1,3 +1,7 @@
+// This file is not used - using jwt-auth.guard.ts with Passport strategy instead
+// Commented out to avoid compilation errors
+
+/*
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../auth.service';
 
@@ -26,6 +30,11 @@ export class JwtGuard implements CanActivate {
     console.log('✅ JWT Guard - Token valid, payload:', { sub: payload.sub, sid: payload.sid, role: payload.role });
 
     // ensure session is valid
+    if (!payload.sid) {
+      console.log('❌ JWT Guard - No session ID in token');
+      throw new UnauthorizedException('Invalid token: missing session ID');
+    }
+
     const session = await this.auth.validateSessionBySid(payload.sid);
     if (!session) {
       console.log('❌ JWT Guard - Session not found or expired for sid:', payload.sid);
@@ -38,3 +47,6 @@ export class JwtGuard implements CanActivate {
     return true;
   }
 }
+*/
+
+export {}; // Make this a module
