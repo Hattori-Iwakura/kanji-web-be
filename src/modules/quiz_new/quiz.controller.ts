@@ -19,6 +19,7 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { SubmitQuizDto } from './dto/submit-answer.dto';
 import { CreatePublishRequestDto } from './dto/create-publish-request.dto';
 import { ReviewPublishRequestDto } from './dto/review-publish-request.dto';
+import { ReorderQuestionsDto } from './dto/reorder-questions.dto';
 
 @Controller('quizzes')
 export class QuizController {
@@ -70,6 +71,17 @@ export class QuizController {
 
   // ============ QUESTION MANAGEMENT ============
 
+  // Specific route MUST come before generic routes
+  @Put(':id/questions/reorder')
+  @UseGuards(JwtAuthGuard)
+  reorderQuestions(
+    @Param('id', ParseIntPipe) quizId: number,
+    @Req() req: any,
+    @Body() body: ReorderQuestionsDto,
+  ) {
+    return this.quizService.reorderQuestions(quizId, req.user.id, body.questionOrders);
+  }
+
   @Post(':id/questions')
   @UseGuards(JwtAuthGuard)
   addQuestion(
@@ -101,16 +113,6 @@ export class QuizController {
     return this.quizService.deleteQuestion(quizId, questionId, req.user.id);
   }
 
-  @Put(':id/questions/reorder')
-  @UseGuards(JwtAuthGuard)
-  reorderQuestions(
-    @Param('id', ParseIntPipe) quizId: number,
-    @Req() req: any,
-    @Body() body: { questionOrders: { id: number; order: number }[] },
-  ) {
-    return this.quizService.reorderQuestions(quizId, req.user.id, body.questionOrders);
-  }
-
   // ============ QUIZ ATTEMPTS ============
 
   @Post(':id/start')
@@ -126,7 +128,12 @@ export class QuizController {
     @Req() req: any,
     @Body() body: SubmitQuizDto,
   ) {
-    return this.quizService.submitQuizAttempt(attemptId, req.user.id, body.answers);
+    return this.quizService.submitQuizAttempt(
+      attemptId,
+      req.user.id,
+      body.answers,
+      body.timeSpent,
+    );
   }
 
   @Get(':id/attempts')

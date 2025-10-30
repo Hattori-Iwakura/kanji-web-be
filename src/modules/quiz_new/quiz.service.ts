@@ -264,8 +264,9 @@ export class QuizService {
       throw new ForbiddenException('Cannot start quiz with no questions');
     }
 
-    // Calculate max score (1 point per question)
-    const maxScore = quiz.questions.length;
+    // Calculate max score (sum of all question points)
+    const maxScore = quiz.questions.reduce((sum, q) => sum + (q.points || 10), 0);
+    const totalQuestions = quiz.questions.length;
 
     // Create attempt
     const attempt = await this.prisma.quizAttempt.create({
@@ -274,6 +275,9 @@ export class QuizService {
         quizId,
         score: 0,
         maxScore,
+        correctAnswers: 0,
+        totalQuestions,
+        timeSpent: 0, // Will be updated on submit
         completed: false,
       },
       include: {
@@ -293,6 +297,7 @@ export class QuizService {
     attemptId: number,
     userId: number,
     answers: { questionId: number; answer: string }[],
+    timeSpent?: number, // Time spent in seconds (optional)
   ) {
     const attempt = await this.prisma.quizAttempt.findUnique({
       where: { id: attemptId },
@@ -317,6 +322,7 @@ export class QuizService {
 
     // Grade answers
     let totalScore = 0;
+    let correctCount = 0;
     const gradedAnswers: Array<{
       attemptId: number;
       questionId: number;
@@ -330,8 +336,9 @@ export class QuizService {
       if (!question) continue;
 
       const isCorrect = this.checkAnswer(question.correctAnswer, answer.answer);
-      const points = isCorrect ? 1 : 0;
+      const points = isCorrect ? (question.points || 10) : 0; // Use question points, default to 10
       totalScore += points;
+      if (isCorrect) correctCount++;
 
       gradedAnswers.push({
         attemptId,
@@ -349,6 +356,8 @@ export class QuizService {
         where: { id: attemptId },
         data: {
           score: totalScore,
+          correctAnswers: correctCount,
+          timeSpent: timeSpent || 0,
           completed: true,
         },
       }),

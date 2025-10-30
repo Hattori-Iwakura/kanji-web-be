@@ -12,9 +12,11 @@ import {
   Req,
   ParseIntPipe,
   BadRequestException,
+  HttpCode,
 } from '@nestjs/common';
 import { KanjiListService } from './kanji-list.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { CreateKanjiListDto } from './dto/create-kanji-list.dto';
 
 @Controller('kanji-lists')
 export class KanjiListController {
@@ -70,13 +72,7 @@ export class KanjiListController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(
-    @Body()
-    body: {
-      name: string;
-      description?: string;
-      categoryId?: number;
-      kanjiIds?: number[];
-    },
+    @Body() body: CreateKanjiListDto,
     @Req() req: any,
   ) {
     const userId = req.user.id;
@@ -169,6 +165,7 @@ export class KanjiListController {
 
   // POST /kanji-lists/admin/publish-requests/:id/approve - Approve request (admin only)
   @Post('admin/publish-requests/:id/approve')
+  @HttpCode(200)
   @UseGuards(JwtAuthGuard)
   async approvePublishRequest(
     @Param('id', ParseIntPipe) id: number,
@@ -181,6 +178,7 @@ export class KanjiListController {
 
   // POST /kanji-lists/admin/publish-requests/:id/reject - Reject request (admin only)
   @Post('admin/publish-requests/:id/reject')
+  @HttpCode(200)
   @UseGuards(JwtAuthGuard)
   async rejectPublishRequest(
     @Param('id', ParseIntPipe) id: number,

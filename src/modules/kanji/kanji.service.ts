@@ -1,8 +1,10 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../../shared/services/prisma.service';
 
 @Injectable()
 export class KanjiService {
+  private readonly CNN_API_URL = process.env.AI_SERVER_URL || 'http://localhost:8000';
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query?: { jlpt?: number; grade?: number; search?: string; limit?: number; offset?: number }) {
@@ -145,7 +147,15 @@ export class KanjiService {
       processedData.jlpt = parseInt(processedData.jlpt.substring(1));
     }
 
-    return this.prisma.kanji.create({ data: processedData });
+    try {
+      return await this.prisma.kanji.create({ data: processedData });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        // Unique constraint violation
+        throw new Error(`Kanji character '${processedData.character}' already exists in the database`);
+      }
+      throw error;
+    }
   }
 
   async update(id: number, data: any) {
@@ -183,5 +193,59 @@ export class KanjiService {
   async delete(id: number) {
     const kanji = await this.findOne(id);
     return this.prisma.kanji.delete({ where: { id } });
+  }
+
+  async searchByCanvas(base64Image: string) {
+    try {
+      // Call CNN API to predict kanji from canvas drawing
+      const response = await fetch(`${this.CNN_API_URL}/api/v1/predict`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: base64Image,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new HttpException(
+          `CNN API error: ${response.statusText}`,
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+
+      const prediction = await response.json();
+
+      // Extract top 5 predictions (character only, no confidence as requested)
+      const top5Characters = prediction.top5?.map((item: any) => item.character) || [];
+
+      // Get full kanji data for top 5 predictions from database
+      const kanjiResults = await this.prisma.kanji.findMany({
+        where: {
+          character: {
+            in: top5Characters,
+          },
+        },
+      });
+
+      // Sort results to match prediction order
+      const sortedResults = top5Characters
+        .map((char: string) => kanjiResults.find((k) => k.character === char))
+        .filter((k) => k !== undefined);
+
+      return {
+        predictions: sortedResults,
+        total: sortedResults.length,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        `Failed to predict kanji: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

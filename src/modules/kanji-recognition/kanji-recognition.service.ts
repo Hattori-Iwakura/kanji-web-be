@@ -78,14 +78,14 @@ export class KanjiRecognitionService {
   async checkHealth(): Promise<{ status: string; message: string }> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.aiServerUrl}/api/v1/health`, {
+        this.httpService.get(`${this.aiServerUrl}/health`, {
           timeout: 5000,
         }),
       );
 
       return {
-        status: response.data.status || 'healthy',
-        message: response.data.message || 'AI server is running',
+        status: 'healthy',
+        message: response.data.msg || 'AI server is running',
       };
     } catch (error: any) {
       this.logger.error(`❌ AI health check failed: ${error.message}`);

@@ -1,215 +1,226 @@
 # Kanji Learning API Documentation
 
-**Base URL**: `http://localhost:3000` (Development)  
-**Version**: 1.0.0  
-**Last Updated**: October 24, 2025
+## Base URL
+```
+http://localhost:3000/api
+```
+
+All endpoints are prefixed with `/api` unless specified otherwise.
 
 ---
 
 ## 📋 Table of Contents
-
 1. [Authentication](#authentication)
-2. [Kanji Management](#kanji-management)
-3. [Kanji Lists](#kanji-lists)
-4. [Quiz System](#quiz-system)
-5. [Flashcard Decks](#flashcard-decks)
-6. [AI Recognition](#ai-recognition)
-7. [Categories](#categories)
-8. [User Management (Admin)](#user-management-admin)
-9. [Common Response Formats](#common-response-formats)
-10. [Error Handling](#error-handling)
+2. [User Management](#user-management)
+3. [Kanji](#kanji)
+4. [Categories](#categories)
+5. [Kanji Lists](#kanji-lists)
+6. [Flashcard Decks](#flashcard-decks)
+7. [Flashcard Sessions](#flashcard-sessions)
+8. [Quizzes](#quizzes)
+9. [Progress](#progress)
+10. [Admin Dashboard](#admin-dashboard)
+11. [AI & Recognition](#ai--recognition)
 
 ---
 
 ## 🔐 Authentication
 
-All endpoints marked with 🔒 require JWT authentication via Bearer token.
+### POST `/auth/login`
+Login with email and password.
 
-### Register User
+**Request Body:**
+```json
+{
+  "account": "user@example.com",
+  "password": "password123",
+  "code": "123456" // Optional: 2FA code
+}
+```
 
-**POST** `/auth/register`
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "accessToken": "jwt_token_here",
+    "user": {
+      "id": 1,
+      "email": "user@example.com",
+      "name": "User Name",
+      "role": "USER"
+    }
+  }
+}
+```
 
+### POST `/auth/register`
 Register a new user account.
 
 **Request Body:**
 ```json
 {
   "email": "user@example.com",
-  "password": "securePassword123",
-  "name": "John Doe"
+  "password": "password123",
+  "name": "User Name"
 }
 ```
 
-**Response (201):**
+**Response:**
 ```json
 {
   "statusCode": 201,
   "data": {
-    "id": 1,
-    "email": "user@example.com",
-    "name": "John Doe",
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "user": {
+      "id": 1,
+      "email": "user@example.com",
+      "name": "User Name"
+    }
   }
 }
 ```
 
----
-
-### Login
-
-**POST** `/auth/login`
-
-Authenticate user and receive access token.
-
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "securePassword123"
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "email": "user@example.com",
-    "name": "John Doe",
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "role": "USER"
-  }
-}
-```
-
----
-
-### Get Profile 🔒
-
-**GET** `/auth/profile`
-
-Get current user profile.
+### GET `/auth/profile`
+Get current user profile. **Requires Authentication**
 
 **Headers:**
 ```
-Authorization: Bearer <token>
+Authorization: Bearer {token}
 ```
 
-**Response (200):**
+**Response:**
 ```json
 {
   "statusCode": 200,
   "data": {
     "id": 1,
     "email": "user@example.com",
-    "name": "John Doe",
-    "profileImage": null,
-    "createdAt": "2025-10-24T00:00:00.000Z"
+    "name": "User Name",
+    "role": "USER",
+    "twoFactorEnabled": false
   }
 }
 ```
 
----
-
-### Update Profile 🔒
-
-**PATCH** `/auth/profile`
-
-Update user profile information.
+### PATCH `/auth/profile`
+Update current user profile. **Requires Authentication**
 
 **Request Body:**
 ```json
 {
-  "name": "Jane Doe",
-  "profileImage": "https://example.com/avatar.jpg"
+  "name": "New Name",
+  "email": "newemail@example.com"
 }
 ```
 
-**Response (200):**
+### POST `/auth/forgot-password`
+Request password reset link.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+### POST `/auth/reset-password`
+Reset password with token.
+
+**Request Body:**
+```json
+{
+  "token": "reset_token",
+  "newPassword": "newpassword123"
+}
+```
+
+### GET `/auth/validate-reset-token/:token`
+Validate password reset token.
+
+### 2FA Endpoints
+
+#### POST `/auth/2fa/setup`
+Setup 2FA - Generate secret and QR code. **Requires Authentication**
+
+**Response:**
 ```json
 {
   "statusCode": 200,
   "data": {
-    "id": 1,
-    "name": "Jane Doe",
-    "profileImage": "https://example.com/avatar.jpg"
+    "secret": "secret_key",
+    "qrCode": "data:image/png;base64,...",
+    "backupCodes": ["code1", "code2", "..."]
   }
 }
 ```
 
----
+#### POST `/auth/2fa/enable`
+Enable 2FA after verifying code. **Requires Authentication**
 
-## 📚 Kanji Management
-
-### Search Kanji
-
-**GET** `/kanji/search`
-
-Advanced kanji search with multiple filters.
-
-**Query Parameters:**
-- `query` (string, optional): Search by character, meaning, or reading
-- `jlptLevels` (string, optional): Comma-separated JLPT levels (e.g., "5,4,3")
-- `grades` (string, optional): Comma-separated grade levels (e.g., "1,2,3")
-- `minStrokes` (number, optional): Minimum stroke count
-- `maxStrokes` (number, optional): Maximum stroke count
-- `page` (number, optional): Page number (default: 1)
-- `limit` (number, optional): Items per page (default: 20)
-- `sortBy` (string, optional): Sort field
-
-**Example:**
-```
-GET /kanji/search?query=日&jlptLevels=5,4&page=1&limit=20
-```
-
-**Response (200):**
+**Request Body:**
 ```json
 {
-  "statusCode": 200,
-  "data": {
-    "items": [
-      {
-        "id": 1,
-        "character": "日",
-        "meanings": "sun, day",
-        "onyomi": "ニチ、ジツ",
-        "kunyomi": "ひ、び、か",
-        "jlpt": 5,
-        "grade": 1,
-        "strokeCount": 4,
-        "frequency": 1
-      }
-    ],
-    "total": 1,
-    "page": 1,
-    "limit": 20,
-    "totalPages": 1
-  }
+  "code": "123456"
 }
 ```
 
+#### POST `/auth/2fa/disable`
+Disable 2FA. **Requires Authentication**
+
+**Request Body:**
+```json
+{
+  "password": "password123",
+  "code": "123456"
+}
+```
+
+#### POST `/auth/2fa/send-email-otp`
+Send 2FA OTP via email. **Requires Authentication**
+
 ---
 
-### Get All Kanji
+## 👥 User Management
 
-**GET** `/kanji`
+**Base Path:** `/admin/users`  
+**Requires:** Authentication + Admin Role
 
-Get kanji list with optional filters.
+### GET `/admin/users`
+Get all users.
+
+### GET `/admin/users/:id`
+Get user by ID.
+
+### PATCH `/admin/users/:id`
+Update user.
+
+**Request Body:**
+```json
+{
+  "name": "New Name",
+  "email": "newemail@example.com",
+  "role": "ADMIN"
+}
+```
+
+### DELETE `/admin/users/:id`
+Delete user.
+
+---
+
+## 📝 Kanji
+
+### GET `/kanji`
+Get all kanji with optional filters.
 
 **Query Parameters:**
-- `jlpt` (number, optional): Filter by JLPT level (1-5)
-- `grade` (number, optional): Filter by grade (1-6)
-- `search` (string, optional): Search term
-- `limit` (number, optional): Number of items
-- `offset` (number, optional): Offset for pagination
+- `jlpt`: Filter by JLPT level (1-5)
+- `grade`: Filter by grade (1-10)
+- `search`: Search by character or meaning
+- `limit`: Number of results (default: 50)
+- `offset`: Pagination offset (default: 0)
 
-**Example:**
-```
-GET /kanji?jlpt=5&limit=50&offset=0
-```
-
-**Response (200):**
+**Response:**
 ```json
 {
   "statusCode": 200,
@@ -217,927 +228,563 @@ GET /kanji?jlpt=5&limit=50&offset=0
     {
       "id": 1,
       "character": "日",
-      "meanings": "sun, day",
-      "onyomi": "ニチ、ジツ",
-      "kunyomi": "ひ、び、か",
+      "meanings": "day, sun, Japan",
+      "onyomi": "にち、じつ",
+      "kunyomi": "ひ、か",
       "jlpt": 5,
       "grade": 1,
-      "strokeCount": 4
-    }
-  ],
-  "total": 80
-}
-```
-
----
-
-### Get Kanji by ID
-
-**GET** `/kanji/:id`
-
-Get detailed information about a specific kanji.
-
-**Parameters:**
-- `id` (number): Kanji ID
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "character": "日",
-    "meanings": "sun, day",
-    "onyomi": "ニチ、ジツ",
-    "kunyomi": "ひ、び、か",
-    "jlpt": 5,
-    "grade": 1,
-    "strokeCount": 4,
-    "frequency": 1,
-    "examples": [
-      {
-        "id": 1,
-        "word": "日本",
-        "reading": "にほん",
-        "meaning": "Japan"
-      }
-    ]
-  }
-}
-```
-
----
-
-### Get Kanji by Character
-
-**GET** `/kanji/character/:character`
-
-Get kanji by its character.
-
-**Parameters:**
-- `character` (string): Kanji character (e.g., "日")
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "character": "日",
-    "meanings": "sun, day",
-    "onyomi": "ニチ、ジツ",
-    "kunyomi": "ひ、び、か"
-  }
-}
-```
-
----
-
-### Create Kanji 🔒 (Admin Only)
-
-**POST** `/kanji`
-
-Create a new kanji entry.
-
-**Request Body:**
-```json
-{
-  "character": "新",
-  "meanings": "new",
-  "onyomi": "シン",
-  "kunyomi": "あたら.しい、あら.た、にい",
-  "jlpt": 4,
-  "grade": 2,
-  "strokeCount": 13,
-  "frequency": 127
-}
-```
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 3037,
-    "character": "新",
-    "meanings": "new"
-  }
-}
-```
-
----
-
-### Update Kanji 🔒 (Admin Only)
-
-**PUT** `/kanji/:id`
-
-Update kanji information.
-
-**Request Body:**
-```json
-{
-  "meanings": "new, fresh",
-  "onyomi": "シン",
-  "kunyomi": "あたら.しい、あら.た、にい"
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 3037,
-    "character": "新",
-    "meanings": "new, fresh"
-  }
-}
-```
-
----
-
-### Delete Kanji 🔒 (Admin Only)
-
-**DELETE** `/kanji/:id`
-
-Delete a kanji entry.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Kanji deleted successfully"
-}
-```
-
----
-
-## 📝 Kanji Lists
-
-### Get All Kanji Lists 🔒
-
-**GET** `/kanji-lists`
-
-Get all kanji lists (public + user's own).
-
-**Query Parameters:**
-- `search` (string, optional): Search by name
-- `type` (string, optional): Filter by type
-- `limit` (number, optional): Items per page
-- `offset` (number, optional): Offset for pagination
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": [
-    {
-      "id": 1,
-      "name": "JLPT N5 Kanji",
-      "description": "Basic kanji for JLPT N5",
-      "isPublic": true,
-      "userId": 1,
-      "userName": "Admin",
-      "userEmail": "admin@example.com",
-      "totalKanji": 80,
-      "createdAt": "2025-10-24T00:00:00.000Z",
-      "updatedAt": "2025-10-24T00:00:00.000Z"
-    }
-  ],
-  "total": 5
-}
-```
-
----
-
-### Get Kanji Lists by JLPT Level 🔒
-
-**GET** `/kanji-lists/jlpt/:level`
-
-Get kanji lists for specific JLPT level.
-
-**Parameters:**
-- `level` (string): JLPT level (N5, N4, N3, N2, N1)
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": [
-    {
-      "id": 1,
-      "name": "JLPT N5 Kanji",
-      "description": "Basic kanji for JLPT N5",
-      "totalKanji": 80,
-      "isPublic": true
+      "strokeCount": 4,
+      "frequency": 1
     }
   ]
 }
 ```
 
+### GET `/kanji/search`
+Search kanji with advanced filters.
+
+**Query Parameters:**
+- `query`: Search text
+- `jlptLevels`: Array of JLPT levels
+- `grades`: Array of grades
+- `minStrokes`: Minimum stroke count
+- `maxStrokes`: Maximum stroke count
+- `page`: Page number (default: 1)
+- `limit`: Results per page (default: 20)
+- `sortBy`: Sort field
+
+### POST `/kanji/search/canvas`
+Search kanji by canvas drawing. **Requires Authentication**
+
+**Request Body:**
+```json
+{
+  "image": "base64_image_data"
+}
+```
+
+### GET `/kanji/:id`
+Get kanji by ID.
+
+### GET `/kanji/character/:character`
+Get kanji by character.
+
+**Example:** `/kanji/character/日`
+
+### POST `/kanji`
+Create new kanji. **Requires Admin Role**
+
+**Request Body:**
+```json
+{
+  "character": "日",
+  "meanings": "day, sun, Japan",
+  "onyomi": "にち、じつ",
+  "kunyomi": "ひ、か",
+  "jlpt": 5,
+  "grade": 1,
+  "strokeCount": 4,
+  "frequency": 1
+}
+```
+
+### PUT `/kanji/:id`
+Update kanji. **Requires Admin Role**
+
+**Request Body:**
+```json
+{
+  "meanings": "day, sun, Japan, calendar day",
+  "frequency": 2
+}
+```
+
+### DELETE `/kanji/:id`
+Delete kanji. **Requires Admin Role**
+
 ---
 
-### Get Kanji List by ID 🔒
+## 🏷️ Categories
 
-**GET** `/kanji-lists/:id`
+### GET `/categories`
+Get all categories.
 
-Get detailed information about a kanji list.
+### GET `/categories/:id`
+Get category by ID.
 
-**Response (200):**
+### POST `/categories`
+Create category. **Requires Admin Role**
+
+**Request Body:**
+```json
+{
+  "name": "JLPT N5",
+  "description": "Basic kanji for N5 level"
+}
+```
+
+### PUT `/categories/:id`
+Update category. **Requires Admin Role**
+
+### DELETE `/categories/:id`
+Delete category. **Requires Admin Role**
+
+---
+
+## 📚 Kanji Lists
+
+### GET `/kanji-lists`
+Get all kanji lists (public + user's own). **Requires Authentication**
+
+**Query Parameters:**
+- `search`: Search by name
+- `type`: Filter by type
+- `limit`: Number of results
+- `offset`: Pagination offset
+
+### GET `/kanji-lists/jlpt/:level`
+Get JLPT level lists (N5, N4, N3, N2, N1). **Requires Authentication**
+
+**Example:** `/kanji-lists/jlpt/N5`
+
+### GET `/kanji-lists/:id`
+Get kanji list by ID. **Requires Authentication**
+
+**Response:**
 ```json
 {
   "statusCode": 200,
   "data": {
     "id": 1,
     "name": "JLPT N5 Kanji",
-    "description": "Basic kanji for JLPT N5",
+    "description": "Essential kanji for N5",
     "isPublic": true,
     "userId": 1,
-    "userName": "Admin",
-    "userEmail": "admin@example.com",
     "kanji": [
       {
         "id": 1,
         "character": "日",
-        "meanings": "sun, day",
-        "jlpt": 5
-      }
-    ],
-    "totalKanji": 80
-  }
-}
-```
-
----
-
-### Create Kanji List 🔒
-
-**POST** `/kanji-lists`
-
-Create a new kanji list.
-
-**Request Body:**
-```json
-{
-  "name": "My Custom List",
-  "description": "My personal kanji collection",
-  "categoryId": 1,
-  "kanjiIds": [1, 2, 3]
-}
-```
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 10,
-    "name": "My Custom List",
-    "description": "My personal kanji collection",
-    "isPublic": false,
-    "userId": 2
-  }
-}
-```
-
----
-
-### Update Kanji List 🔒
-
-**PUT** `/kanji-lists/:id` or **PATCH** `/kanji-lists/:id`
-
-Update kanji list information.
-
-**Request Body:**
-```json
-{
-  "name": "Updated List Name",
-  "description": "Updated description",
-  "isPublic": true
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 10,
-    "name": "Updated List Name",
-    "isPublic": true
-  }
-}
-```
-
----
-
-### Delete Kanji List 🔒
-
-**DELETE** `/kanji-lists/:id`
-
-Delete a kanji list.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Kanji list deleted successfully"
-}
-```
-
----
-
-### Add Kanji to List 🔒
-
-**POST** `/kanji-lists/:id/kanji/:kanjiId`
-
-Add a kanji to the list.
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 1,
-    "listId": 10,
-    "kanjiId": 5
-  }
-}
-```
-
----
-
-### Remove Kanji from List 🔒
-
-**DELETE** `/kanji-lists/:id/kanji/:kanjiId`
-
-Remove a kanji from the list.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Kanji removed from list successfully"
-}
-```
-
----
-
-### Request Publish 🔒
-
-**POST** `/kanji-lists/:id/publish`
-
-Request to publish a private list as public.
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 1,
-    "listId": 10,
-    "status": "PENDING",
-    "requestedAt": "2025-10-24T00:00:00.000Z"
-  }
-}
-```
-
----
-
-### Get Publish Requests 🔒 (Admin)
-
-**GET** `/kanji-lists/admin/publish-requests`
-
-Get all publish requests.
-
-**Query Parameters:**
-- `status` (string, optional): Filter by status (PENDING, APPROVED, REJECTED)
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": [
-    {
-      "id": 1,
-      "listId": 10,
-      "status": "PENDING",
-      "list": {
-        "name": "My Custom List",
-        "totalKanji": 50
-      },
-      "requestedAt": "2025-10-24T00:00:00.000Z"
-    }
-  ]
-}
-```
-
----
-
-### Approve Publish Request 🔒 (Admin)
-
-**POST** `/kanji-lists/admin/publish-requests/:id/approve`
-
-Approve a publish request.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "status": "APPROVED",
-    "reviewedAt": "2025-10-24T00:00:00.000Z"
-  }
-}
-```
-
----
-
-### Reject Publish Request 🔒 (Admin)
-
-**POST** `/kanji-lists/admin/publish-requests/:id/reject`
-
-Reject a publish request.
-
-**Request Body:**
-```json
-{
-  "reason": "List does not meet quality standards"
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "status": "REJECTED",
-    "reason": "List does not meet quality standards"
-  }
-}
-```
-
----
-
-## 🎯 Quiz System
-
-### Get All Quizzes 🔒
-
-**GET** `/quizzes`
-
-Get all quizzes (public + user's own).
-
-**Query Parameters:**
-- `search` (string, optional): Search by title
-- `limit` (number, optional): Items per page
-- `offset` (number, optional): Offset for pagination
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "items": [
-      {
-        "id": 1,
-        "title": "JLPT N5 Practice Quiz",
-        "description": "Test your N5 knowledge",
-        "isPublic": true,
-        "userId": 1,
-        "totalQuestions": 20,
-        "createdAt": "2025-10-24T00:00:00.000Z"
-      }
-    ],
-    "total": 5
-  }
-}
-```
-
----
-
-### Get Quiz by ID 🔒
-
-**GET** `/quizzes/:id`
-
-Get detailed quiz information including questions.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "title": "JLPT N5 Practice Quiz",
-    "description": "Test your N5 knowledge",
-    "isPublic": true,
-    "userId": 1,
-    "questions": [
-      {
-        "id": 1,
-        "questionType": "MULTIPLE_CHOICE",
-        "questionText": "What does 日 mean?",
-        "points": 10,
-        "order": 1,
-        "options": [
-          { "id": 1, "text": "sun, day", "isCorrect": true },
-          { "id": 2, "text": "moon", "isCorrect": false },
-          { "id": 3, "text": "star", "isCorrect": false },
-          { "id": 4, "text": "water", "isCorrect": false }
-        ]
-      }
-    ],
-    "totalQuestions": 20
-  }
-}
-```
-
----
-
-### Create Quiz 🔒
-
-**POST** `/quizzes`
-
-Create a new quiz.
-
-**Request Body:**
-```json
-{
-  "title": "My Practice Quiz",
-  "description": "Custom quiz for practice"
-}
-```
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 10,
-    "title": "My Practice Quiz",
-    "description": "Custom quiz for practice",
-    "isPublic": false,
-    "userId": 2
-  }
-}
-```
-
----
-
-### Update Quiz 🔒
-
-**PUT** `/quizzes/:id`
-
-Update quiz information.
-
-**Request Body:**
-```json
-{
-  "title": "Updated Quiz Title",
-  "description": "Updated description",
-  "isPublic": true
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 10,
-    "title": "Updated Quiz Title",
-    "isPublic": true
-  }
-}
-```
-
----
-
-### Delete Quiz 🔒
-
-**DELETE** `/quizzes/:id`
-
-Delete a quiz.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Quiz deleted successfully"
-}
-```
-
----
-
-### Add Question to Quiz 🔒
-
-**POST** `/quizzes/:id/questions`
-
-Add a new question to the quiz.
-
-**Request Body (Multiple Choice):**
-```json
-{
-  "questionType": "MULTIPLE_CHOICE",
-  "questionText": "What does 月 mean?",
-  "points": 10,
-  "options": [
-    { "text": "moon, month", "isCorrect": true },
-    { "text": "sun", "isCorrect": false },
-    { "text": "star", "isCorrect": false },
-    { "text": "water", "isCorrect": false }
-  ]
-}
-```
-
-**Request Body (True/False):**
-```json
-{
-  "questionType": "TRUE_FALSE",
-  "questionText": "日 means sun",
-  "points": 5,
-  "correctAnswer": true
-}
-```
-
-**Request Body (Drawing):**
-```json
-{
-  "questionType": "DRAWING",
-  "questionText": "Draw the kanji for 'sun'",
-  "points": 15,
-  "correctKanjiId": 1
-}
-```
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 50,
-    "questionType": "MULTIPLE_CHOICE",
-    "questionText": "What does 月 mean?",
-    "points": 10,
-    "order": 5
-  }
-}
-```
-
----
-
-### Update Question 🔒
-
-**PUT** `/quizzes/:id/questions/:questionId`
-
-Update a question.
-
-**Request Body:**
-```json
-{
-  "questionText": "Updated question text",
-  "points": 15
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 50,
-    "questionText": "Updated question text",
-    "points": 15
-  }
-}
-```
-
----
-
-### Delete Question 🔒
-
-**DELETE** `/quizzes/:id/questions/:questionId`
-
-Delete a question from the quiz.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Question deleted successfully"
-}
-```
-
----
-
-### Reorder Questions 🔒
-
-**PUT** `/quizzes/:id/questions/reorder`
-
-Reorder questions in the quiz.
-
-**Request Body:**
-```json
-{
-  "questionOrders": [
-    { "id": 1, "order": 2 },
-    { "id": 2, "order": 1 },
-    { "id": 3, "order": 3 }
-  ]
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Questions reordered successfully"
-}
-```
-
----
-
-### Start Quiz Attempt 🔒
-
-**POST** `/quizzes/:id/start`
-
-Start a new quiz attempt.
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 100,
-    "quizId": 1,
-    "userId": 2,
-    "startedAt": "2025-10-24T10:00:00.000Z",
-    "status": "IN_PROGRESS"
-  }
-}
-```
-
----
-
-### Submit Quiz Attempt 🔒
-
-**POST** `/quizzes/attempts/:attemptId/submit`
-
-Submit answers for a quiz attempt.
-
-**Request Body:**
-```json
-{
-  "answers": [
-    {
-      "questionId": 1,
-      "selectedOptionId": 1
-    },
-    {
-      "questionId": 2,
-      "booleanAnswer": true
-    },
-    {
-      "questionId": 3,
-      "drawnKanjiId": 5
-    }
-  ]
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 100,
-    "quizId": 1,
-    "score": 85,
-    "totalPoints": 100,
-    "correctAnswers": 17,
-    "totalQuestions": 20,
-    "completedAt": "2025-10-24T10:30:00.000Z",
-    "timeSpent": 1800,
-    "passed": true
-  }
-}
-```
-
----
-
-### Get Quiz Attempts 🔒
-
-**GET** `/quizzes/:id/attempts`
-
-Get all attempts for a quiz.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": [
-    {
-      "id": 100,
-      "score": 85,
-      "totalPoints": 100,
-      "completedAt": "2025-10-24T10:30:00.000Z",
-      "passed": true
-    }
-  ]
-}
-```
-
----
-
-### Get Quiz Attempt Details 🔒
-
-**GET** `/quizzes/attempts/:attemptId`
-
-Get detailed information about a specific attempt.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 100,
-    "quizId": 1,
-    "score": 85,
-    "correctAnswers": 17,
-    "totalQuestions": 20,
-    "answers": [
-      {
-        "questionId": 1,
-        "isCorrect": true,
-        "pointsEarned": 10
+        "meanings": "day, sun, Japan"
       }
     ]
   }
 }
 ```
 
----
-
-### Request Publish Quiz 🔒
-
-**POST** `/quizzes/:id/publish-request`
-
-Request to publish a quiz.
+### POST `/kanji-lists`
+Create new kanji list. **Requires Authentication**
 
 **Request Body:**
 ```json
 {
-  "message": "This quiz is ready for public use"
+  "name": "My Custom List",
+  "description": "Personal study list",
+  "isPublic": false,
+  "categoryId": 1,
+  "kanjiIds": [1, 2, 3]
 }
 ```
 
-**Response (201):**
+### PUT `/kanji-lists/:id`
+Update kanji list. **Requires Authentication**
+
+### PATCH `/kanji-lists/:id`
+Update kanji list (alias for PUT). **Requires Authentication**
+
+### DELETE `/kanji-lists/:id`
+Delete kanji list. **Requires Authentication**
+
+### POST `/kanji-lists/:id/kanji/:kanjiId`
+Add kanji to list. **Requires Authentication**
+
+### DELETE `/kanji-lists/:id/kanji/:kanjiId`
+Remove kanji from list. **Requires Authentication**
+
+### POST `/kanji-lists/:id/publish`
+Request to publish list. **Requires Authentication**
+
+### GET `/kanji-lists/admin/publish-requests`
+Get publish requests. **Requires Admin Role**
+
+**Query Parameters:**
+- `status`: Filter by status (pending, approved, rejected)
+
+### POST `/kanji-lists/admin/publish-requests/:id/approve`
+Approve publish request. **Requires Admin Role**
+
+### POST `/kanji-lists/admin/publish-requests/:id/reject`
+Reject publish request. **Requires Admin Role**
+
+**Request Body:**
+```json
+{
+  "reason": "Incomplete or inaccurate content"
+}
+```
+
+---
+
+## 🃏 Flashcard Decks
+
+### GET `/flashcard-decks`
+Get all flashcard decks. **Requires Authentication**
+
+**Query Parameters:**
+- `search`: Search by name
+- `limit`: Number of results
+- `offset`: Pagination offset
+
+### GET `/flashcard-decks/:id`
+Get flashcard deck by ID. **Requires Authentication**
+
+### POST `/flashcard-decks`
+Create new flashcard deck. **Requires Authentication**
+
+**Request Body:**
+```json
+{
+  "name": "JLPT N5 Deck",
+  "description": "Flashcards for N5 kanji",
+  "kanjiIds": [1, 2, 3, 4, 5]
+}
+```
+
+### PUT `/flashcard-decks/:id`
+Update flashcard deck. **Requires Authentication**
+
+### DELETE `/flashcard-decks/:id`
+Delete flashcard deck. **Requires Authentication**
+
+### POST `/flashcard-decks/:id/cards/:kanjiId`
+Add card to deck. **Requires Authentication**
+
+### DELETE `/flashcard-decks/:id/cards/:kanjiId`
+Remove card from deck. **Requires Authentication**
+
+### POST `/flashcard-decks/:id/publish`
+Request to publish deck. **Requires Authentication**
+
+### GET `/flashcard-decks/admin/publish-requests`
+Get publish requests. **Requires Admin Role**
+
+### POST `/flashcard-decks/admin/publish-requests/:id/approve`
+Approve publish request. **Requires Admin Role**
+
+### POST `/flashcard-decks/admin/publish-requests/:id/reject`
+Reject publish request. **Requires Admin Role**
+
+---
+
+## 🎴 Flashcard Sessions
+
+**All endpoints require authentication**
+
+### POST `/flashcard-sessions/start`
+Start a new flashcard study session.
+
+**Request Body:**
+```json
+{
+  "deckId": 1,
+  "newCardsLimit": 20,
+  "reviewCardsLimit": 50
+}
+```
+
+**Response:**
 ```json
 {
   "statusCode": 201,
   "data": {
-    "id": 1,
-    "quizId": 10,
-    "status": "PENDING",
-    "message": "This quiz is ready for public use"
+    "sessionId": 1,
+    "deckId": 1,
+    "newCards": 20,
+    "reviewCards": 15,
+    "totalCards": 35,
+    "firstCard": {
+      "id": 1,
+      "character": "日",
+      "meanings": "day, sun, Japan"
+    }
+  }
+}
+```
+
+### GET `/flashcard-sessions/:sessionId`
+Get session progress.
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "sessionId": 1,
+    "cardsStudied": 10,
+    "cardsRemaining": 25,
+    "correctAnswers": 8,
+    "incorrectAnswers": 2,
+    "averageEaseFactor": 2.5
+  }
+}
+```
+
+### GET `/flashcard-sessions/:sessionId/next-card`
+Get the next card in the session.
+
+### POST `/flashcard-sessions/:sessionId/review/:cardId`
+Review a card with SM-2 spaced repetition.
+
+**Request Body:**
+```json
+{
+  "quality": 4,
+  "timeSpent": 5.2
+}
+```
+
+**Quality Scale:**
+- 0: Complete blackout
+- 1: Incorrect response, but correct answer felt familiar
+- 2: Incorrect response, but correct answer seemed easy to recall
+- 3: Correct response, but required significant effort
+- 4: Correct response, with hesitation
+- 5: Perfect response
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "cardId": 1,
+    "newInterval": 4,
+    "nextReviewDate": "2025-11-02T00:00:00Z",
+    "easeFactor": 2.6,
+    "repetitions": 2
+  }
+}
+```
+
+### POST `/flashcard-sessions/:sessionId/complete`
+Complete the study session.
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "sessionId": 1,
+    "totalCards": 35,
+    "cardsStudied": 35,
+    "correctAnswers": 28,
+    "incorrectAnswers": 7,
+    "accuracy": 80,
+    "timeSpent": 1200,
+    "completedAt": "2025-10-29T12:30:00Z"
+  }
+}
+```
+
+### GET `/flashcard-sessions/due-cards/:deckId`
+Get due cards count for a deck.
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "deckId": 1,
+    "newCards": 20,
+    "dueCards": 15,
+    "totalCards": 35
+  }
+}
+```
+
+### GET `/flashcard-sessions/statistics/study`
+Get study statistics with daily breakdown.
+
+**Query Parameters:**
+- `startDate`: Start date (ISO format)
+- `endDate`: End date (ISO format)
+
+### GET `/flashcard-sessions/statistics/deck/:deckId`
+Get detailed deck statistics.
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "deckId": 1,
+    "totalCards": 100,
+    "newCards": 20,
+    "learningCards": 30,
+    "reviewCards": 40,
+    "matureCards": 10,
+    "averageEaseFactor": 2.5,
+    "retentionRate": 85.5
   }
 }
 ```
 
 ---
 
-### Get Pending Publish Requests 🔒 (Admin)
+## 📝 Quizzes
 
-**GET** `/quizzes/admin/publish-requests`
+**All endpoints require authentication unless specified**
 
-Get all pending publish requests.
+### GET `/quizzes`
+Get all quizzes (public + user's own).
 
-**Response (200):**
+**Query Parameters:**
+- `search`: Search by title
+- `limit`: Number of results
+- `offset`: Pagination offset
+
+### GET `/quizzes/:id`
+Get quiz by ID with questions.
+
+**Response:**
 ```json
 {
   "statusCode": 200,
-  "data": [
-    {
-      "id": 1,
-      "quizId": 10,
-      "status": "PENDING",
-      "quiz": {
-        "title": "My Practice Quiz",
-        "totalQuestions": 20
+  "data": {
+    "id": 1,
+    "title": "JLPT N5 Quiz",
+    "description": "Test your N5 knowledge",
+    "isPublic": true,
+    "questions": [
+      {
+        "id": 1,
+        "text": "What does 日 mean?",
+        "type": "multiple_choice",
+        "options": ["day", "month", "year", "week"],
+        "correctAnswer": "day",
+        "order": 1
       }
-    }
+    ]
+  }
+}
+```
+
+### POST `/quizzes`
+Create new quiz.
+
+**Request Body:**
+```json
+{
+  "title": "My Quiz",
+  "description": "Custom quiz for practice"
+}
+```
+
+### PUT `/quizzes/:id`
+Update quiz.
+
+### DELETE `/quizzes/:id`
+Delete quiz.
+
+### POST `/quizzes/:id/questions`
+Add question to quiz.
+
+**Request Body:**
+```json
+{
+  "text": "What does 月 mean?",
+  "type": "multiple_choice",
+  "options": ["day", "month", "year", "week"],
+  "correctAnswer": "month",
+  "explanation": "月 (tsuki) means moon or month"
+}
+```
+
+### PUT `/quizzes/:id/questions/reorder`
+Reorder questions in quiz.
+
+**Request Body:**
+```json
+{
+  "questionOrders": [
+    { "questionId": 1, "order": 2 },
+    { "questionId": 2, "order": 1 }
   ]
 }
 ```
 
----
+### PUT `/quizzes/:id/questions/:questionId`
+Update question.
 
-### Review Publish Request 🔒 (Admin)
+### DELETE `/quizzes/:id/questions/:questionId`
+Delete question.
 
-**PUT** `/quizzes/admin/publish-requests/:requestId`
+### POST `/quizzes/:id/start`
+Start a quiz attempt.
 
-Approve or reject a publish request.
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "attemptId": 1,
+    "quizId": 1,
+    "startedAt": "2025-10-29T12:00:00Z",
+    "questions": [...]
+  }
+}
+```
+
+### POST `/quizzes/attempts/:attemptId/submit`
+Submit quiz attempt.
+
+**Request Body:**
+```json
+{
+  "answers": [
+    { "questionId": 1, "answer": "day" },
+    { "questionId": 2, "answer": "month" }
+  ],
+  "timeSpent": 300
+}
+```
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "attemptId": 1,
+    "score": 85,
+    "totalQuestions": 20,
+    "correctAnswers": 17,
+    "incorrectAnswers": 3,
+    "timeSpent": 300,
+    "completedAt": "2025-10-29T12:05:00Z",
+    "results": [
+      {
+        "questionId": 1,
+        "userAnswer": "day",
+        "correctAnswer": "day",
+        "isCorrect": true
+      }
+    ]
+  }
+}
+```
+
+### GET `/quizzes/:id/attempts`
+Get user's quiz attempts.
+
+### GET `/quizzes/attempts/:attemptId`
+Get quiz attempt details.
+
+### POST `/quizzes/:id/publish-request`
+Request to publish quiz.
+
+### GET `/quizzes/admin/publish-requests`
+Get pending publish requests. **Requires Admin Role**
+
+### PUT `/quizzes/admin/publish-requests/:requestId`
+Review publish request. **Requires Admin Role**
 
 **Request Body:**
 ```json
@@ -1145,328 +792,307 @@ Approve or reject a publish request.
   "action": "approve"
 }
 ```
-
 or
-
 ```json
 {
   "action": "reject"
 }
 ```
 
-**Response (200):**
+---
+
+## 📊 Progress
+
+**All endpoints require authentication**
+
+### GET `/progress/overview`
+Get comprehensive progress overview.
+
+**Response:**
 ```json
 {
   "statusCode": 200,
   "data": {
-    "id": 1,
-    "status": "APPROVED",
-    "reviewedAt": "2025-10-24T00:00:00.000Z"
+    "totalKanjiStudied": 150,
+    "flashcardsCompleted": 500,
+    "quizzesCompleted": 25,
+    "currentStreak": 7,
+    "longestStreak": 14,
+    "totalStudyTime": 12000,
+    "level": "Intermediate",
+    "xp": 1500
   }
 }
 ```
 
----
-
-## 🎴 Flashcard Decks
-
-### Get All Flashcard Decks
-
-**GET** `/flashcard-decks`
-
-Get all flashcard decks (public + authenticated user's own).
+### GET `/progress/flashcard`
+Get detailed flashcard progress.
 
 **Query Parameters:**
-- `search` (string, optional): Search by name
-- `limit` (number, optional): Items per page
-- `offset` (number, optional): Offset for pagination
+- `deckId`: Filter by deck ID
+- `startDate`: Start date
+- `endDate`: End date
 
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "items": [
-      {
-        "id": 1,
-        "name": "JLPT N5 Flashcards",
-        "description": "Basic kanji flashcards",
-        "isPublic": true,
-        "userId": 1,
-        "userName": "Admin",
-        "userEmail": "admin@example.com",
-        "totalCards": 80,
-        "createdAt": "2025-10-24T00:00:00.000Z"
-      }
-    ],
-    "total": 10
-  }
-}
-```
-
----
-
-### Get Flashcard Deck by ID 🔒
-
-**GET** `/flashcard-decks/:id`
-
-Get detailed flashcard deck information.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "name": "JLPT N5 Flashcards",
-    "description": "Basic kanji flashcards",
-    "isPublic": true,
-    "userId": 1,
-    "cards": [
-      {
-        "id": 1,
-        "kanjiId": 1,
-        "kanji": {
-          "character": "日",
-          "meanings": "sun, day",
-          "onyomi": "ニチ、ジツ",
-          "kunyomi": "ひ、び、か"
-        },
-        "order": 1
-      }
-    ],
-    "totalCards": 80
-  }
-}
-```
-
----
-
-### Create Flashcard Deck 🔒
-
-**POST** `/flashcard-decks`
-
-Create a new flashcard deck.
-
-**Request Body:**
-```json
-{
-  "name": "My Flashcard Deck",
-  "description": "Personal flashcard collection",
-  "kanjiIds": [1, 2, 3, 4, 5]
-}
-```
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 10,
-    "name": "My Flashcard Deck",
-    "description": "Personal flashcard collection",
-    "isPublic": false,
-    "userId": 2,
-    "totalCards": 5
-  }
-}
-```
-
----
-
-### Update Flashcard Deck 🔒
-
-**PUT** `/flashcard-decks/:id`
-
-Update flashcard deck information.
-
-**Request Body:**
-```json
-{
-  "name": "Updated Deck Name",
-  "description": "Updated description",
-  "isPublic": true
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 10,
-    "name": "Updated Deck Name",
-    "isPublic": true
-  }
-}
-```
-
----
-
-### Delete Flashcard Deck 🔒
-
-**DELETE** `/flashcard-decks/:id`
-
-Delete a flashcard deck.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Flashcard deck deleted successfully"
-}
-```
-
----
-
-### Add Card to Deck 🔒
-
-**POST** `/flashcard-decks/:id/cards/:kanjiId`
-
-Add a kanji card to the deck.
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 1,
-    "deckId": 10,
-    "kanjiId": 6,
-    "order": 6
-  }
-}
-```
-
----
-
-### Remove Card from Deck 🔒
-
-**DELETE** `/flashcard-decks/:id/cards/:kanjiId`
-
-Remove a card from the deck.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Card removed from deck successfully"
-}
-```
-
----
-
-### Request Publish Deck 🔒
-
-**POST** `/flashcard-decks/:id/publish`
-
-Request to publish a deck.
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 1,
-    "deckId": 10,
-    "status": "PENDING"
-  }
-}
-```
-
----
-
-### Get Publish Requests 🔒 (Admin)
-
-**GET** `/flashcard-decks/admin/publish-requests`
-
-Get all publish requests.
+### GET `/progress/quiz`
+Get detailed quiz progress.
 
 **Query Parameters:**
-- `status` (string, optional): Filter by status
+- `quizId`: Filter by quiz ID
+- `startDate`: Start date
+- `endDate`: End date
 
-**Response (200):**
+### GET `/progress/streak`
+Get streak information.
+
+**Response:**
 ```json
 {
   "statusCode": 200,
-  "data": [
-    {
-      "id": 1,
-      "deckId": 10,
-      "status": "PENDING",
-      "deck": {
-        "name": "My Flashcard Deck",
-        "totalCards": 50
+  "data": {
+    "currentStreak": 7,
+    "longestStreak": 14,
+    "lastStudyDate": "2025-10-29",
+    "streakStartDate": "2025-10-23"
+  }
+}
+```
+
+### GET `/progress/leaderboard`
+Get leaderboard rankings.
+
+**Query Parameters:**
+- `period`: Time period (week, month, all)
+- `limit`: Number of results
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "rankings": [
+      {
+        "rank": 1,
+        "userId": 5,
+        "name": "User Name",
+        "xp": 2500,
+        "kanjiStudied": 200
       }
+    ],
+    "userRank": {
+      "rank": 15,
+      "xp": 1500
     }
-  ]
-}
-```
-
----
-
-### Approve Publish Request 🔒 (Admin)
-
-**POST** `/flashcard-decks/admin/publish-requests/:id/approve`
-
-Approve a publish request.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "status": "APPROVED"
   }
 }
 ```
 
----
+### GET `/progress/achievements`
+Get achievements.
 
-### Reject Publish Request 🔒 (Admin)
-
-**POST** `/flashcard-decks/admin/publish-requests/:id/reject`
-
-Reject a publish request.
-
-**Request Body:**
-```json
-{
-  "reason": "Deck does not meet quality standards"
-}
-```
-
-**Response (200):**
+**Response:**
 ```json
 {
   "statusCode": 200,
   "data": {
-    "id": 1,
-    "status": "REJECTED",
-    "reason": "Deck does not meet quality standards"
+    "achievements": [
+      {
+        "id": 1,
+        "name": "First Step",
+        "description": "Study your first kanji",
+        "icon": "🎯",
+        "unlockedAt": "2025-10-15T10:00:00Z"
+      }
+    ],
+    "totalAchievements": 50,
+    "unlockedAchievements": 12
   }
 }
 ```
 
+### GET `/progress/chart-data`
+Get chart data for progress visualization.
+
+**Query Parameters:**
+- `period`: Time period (week, month, year)
+- `type`: Chart type (daily, weekly, monthly)
+
+### GET `/progress/study-time`
+Get study time tracking.
+
+**Query Parameters:**
+- `startDate`: Start date
+- `endDate`: End date
+
 ---
 
-## 🤖 AI Recognition
+## 🛠️ Admin Dashboard
 
-### Predict Kanji (AI Service)
+**All endpoints require Admin Role**
 
-**POST** `/ai/predict`
+### GET `/admin/dashboard/overview`
+Get dashboard overview with aggregated statistics.
 
-Predict kanji from base64 image data.
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "totalUsers": 1000,
+    "activeUsers": 500,
+    "totalKanji": 2136,
+    "totalQuizzes": 150,
+    "totalFlashcardDecks": 200,
+    "totalSessions": 5000,
+    "pendingPublishRequests": 10
+  }
+}
+```
+
+### GET `/admin/dashboard/stats/users`
+Get user statistics.
+
+**Query Parameters:**
+- `period`: Time period (day, week, month, year)
+
+### GET `/admin/dashboard/stats/content`
+Get content statistics.
+
+### GET `/admin/dashboard/stats/activity`
+Get activity statistics.
+
+**Query Parameters:**
+- `period`: Time period
+- `limit`: Number of results
+
+### GET `/admin/dashboard/charts/users`
+Get user growth chart data.
+
+### GET `/admin/dashboard/charts/activity`
+Get activity trends chart data.
+
+### GET `/admin/publish/requests`
+Get all publish requests with filters.
+
+**Query Parameters:**
+- `status`: Filter by status (pending, approved, rejected)
+- `type`: Filter by type (quiz, list, deck)
+- `limit`: Number of results
+- `offset`: Pagination offset
+
+### GET `/admin/publish/requests/:id`
+Get detailed publish request.
+
+**Query Parameters:**
+- `type`: Request type (quiz, list, deck) - **Required**
+
+### PATCH `/admin/publish/requests/:id/review`
+Review publish request (approve/reject).
+
+**Query Parameters:**
+- `type`: Request type (quiz, list, deck) - **Required**
 
 **Request Body:**
 ```json
 {
-  "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+  "status": "approved",
+  "reviewMessage": "Looks good!"
+}
+```
+or
+```json
+{
+  "status": "rejected",
+  "reviewMessage": "Needs improvement"
 }
 ```
 
-**Response (200):**
+### GET `/admin/publish/statistics`
+Get publish request statistics.
+
+### GET `/admin/system/health`
+Get system health check.
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "status": "healthy",
+    "database": "connected",
+    "uptime": 86400,
+    "memory": {
+      "used": 512,
+      "total": 2048
+    }
+  }
+}
+```
+
+### GET `/admin/system/metrics`
+Get system performance metrics.
+
+**Query Parameters:**
+- `period`: Time period
+
+---
+
+## 🤖 AI & Recognition
+
+### POST `/ai/predict`
+Predict kanji from image.
+
+**Request Body:**
+```json
+{
+  "image": "base64_image_data"
+}
+```
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "predictions": [
+      {
+        "character": "日",
+        "confidence": 0.95
+      },
+      {
+        "character": "目",
+        "confidence": 0.78
+      }
+    ]
+  }
+}
+```
+
+### GET `/ai/health`
+Check AI server health.
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "status": "healthy",
+    "modelLoaded": true,
+    "version": "1.0.0"
+  }
+}
+```
+
+### POST `/kanji-recognition/recognize`
+Recognize kanji from canvas drawing.
+
+**Request Body:**
+```json
+{
+  "image": "base64_image_data"
+}
+```
+
+**Response:**
 ```json
 {
   "statusCode": 200,
@@ -1475,454 +1101,74 @@ Predict kanji from base64 image data.
       {
         "character": "日",
         "confidence": 0.95,
-        "rank": 1
-      },
-      {
-        "character": "目",
-        "confidence": 0.03,
-        "rank": 2
+        "kanji": {
+          "id": 1,
+          "meanings": "day, sun, Japan",
+          "onyomi": "にち、じつ",
+          "kunyomi": "ひ、か"
+        }
       }
-    ],
-    "topPrediction": {
-      "character": "日",
-      "confidence": 0.95
-    }
+    ]
   }
 }
 ```
 
----
-
-### Check AI Health
-
-**GET** `/ai/health`
-
-Check AI server health status.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "status": "healthy",
-    "message": "AI server is operational",
-    "timestamp": "2025-10-24T00:00:00.000Z"
-  }
-}
-```
+### GET `/kanji-recognition/health`
+Check AI server health.
 
 ---
 
-### Recognize Kanji (Canvas Drawing)
+## 📌 Common Response Format
 
-**POST** `/kanji-recognition/recognize`
-
-Recognize kanji from canvas drawing data.
-
-**Request Body:**
-```json
-{
-  "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "predictions": [
-      {
-        "kanji": "日",
-        "confidence": 0.95,
-        "rank": 1
-      }
-    ],
-    "recognized": true
-  }
-}
-```
-
----
-
-### Check Recognition Health
-
-**GET** `/kanji-recognition/health`
-
-Check kanji recognition service health.
-
-**Response (200):**
-```json
-{
-  "status": "healthy",
-  "message": "Recognition service is operational"
-}
-```
-
----
-
-## 📂 Categories
-
-### Get All Categories
-
-**GET** `/categories`
-
-Get all available categories.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": [
-    {
-      "id": 1,
-      "name": "JLPT",
-      "description": "Japanese Language Proficiency Test levels"
-    },
-    {
-      "id": 2,
-      "name": "Grade",
-      "description": "Japanese school grade levels"
-    }
-  ]
-}
-```
-
----
-
-### Get Category by ID
-
-**GET** `/categories/:id`
-
-Get category details.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "name": "JLPT",
-    "description": "Japanese Language Proficiency Test levels"
-  }
-}
-```
-
----
-
-### Create Category 🔒 (Admin)
-
-**POST** `/categories`
-
-Create a new category.
-
-**Request Body:**
-```json
-{
-  "name": "Custom Category",
-  "description": "Custom category description"
-}
-```
-
-**Response (201):**
-```json
-{
-  "statusCode": 201,
-  "data": {
-    "id": 3,
-    "name": "Custom Category",
-    "description": "Custom category description"
-  }
-}
-```
-
----
-
-### Update Category 🔒 (Admin)
-
-**PUT** `/categories/:id`
-
-Update category information.
-
-**Request Body:**
-```json
-{
-  "name": "Updated Category Name",
-  "description": "Updated description"
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 3,
-    "name": "Updated Category Name"
-  }
-}
-```
-
----
-
-### Delete Category 🔒 (Admin)
-
-**DELETE** `/categories/:id`
-
-Delete a category.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "Category deleted successfully"
-}
-```
-
----
-
-## 👤 User Management (Admin)
-
-### Get All Users 🔒 (Admin)
-
-**GET** `/admin/users`
-
-Get all users (admin only).
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": [
-    {
-      "id": 1,
-      "email": "user@example.com",
-      "name": "John Doe",
-      "role": "USER",
-      "createdAt": "2025-10-24T00:00:00.000Z"
-    }
-  ]
-}
-```
-
----
-
-### Get User by ID 🔒 (Admin)
-
-**GET** `/admin/users/:id`
-
-Get user details.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "email": "user@example.com",
-    "name": "John Doe",
-    "role": "USER",
-    "profileImage": null,
-    "createdAt": "2025-10-24T00:00:00.000Z"
-  }
-}
-```
-
----
-
-### Update User 🔒 (Admin)
-
-**PATCH** `/admin/users/:id`
-
-Update user information.
-
-**Request Body:**
-```json
-{
-  "name": "Jane Doe",
-  "role": "ADMIN"
-}
-```
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "id": 1,
-    "name": "Jane Doe",
-    "role": "ADMIN"
-  }
-}
-```
-
----
-
-### Delete User 🔒 (Admin)
-
-**DELETE** `/admin/users/:id`
-
-Delete a user account.
-
-**Response (200):**
-```json
-{
-  "statusCode": 200,
-  "message": "User deleted successfully"
-}
-```
-
----
-
-## 📊 Common Response Formats
-
-### Success Response
+All successful responses follow this format:
 
 ```json
 {
   "statusCode": 200,
-  "data": { /* response data */ },
-  "message": "Optional success message"
+  "data": { ... },
+  "timestamp": "2025-10-29T12:00:00.000Z"
 }
 ```
 
-### Paginated Response
+## ❌ Error Response Format
 
-```json
-{
-  "statusCode": 200,
-  "data": {
-    "items": [ /* array of items */ ],
-    "total": 100,
-    "page": 1,
-    "limit": 20,
-    "totalPages": 5
-  }
-}
-```
-
----
-
-## ❌ Error Handling
-
-### Error Response Format
+All error responses follow this format:
 
 ```json
 {
   "statusCode": 400,
-  "message": "Error message",
-  "error": "Bad Request"
+  "message": "Error message here",
+  "error": "Bad Request",
+  "timestamp": "2025-10-29T12:00:00.000Z"
 }
 ```
 
-### Common HTTP Status Codes
+## 🔑 Authentication
 
-| Code | Meaning | Description |
-|------|---------|-------------|
-| 200 | OK | Request successful |
-| 201 | Created | Resource created successfully |
-| 400 | Bad Request | Invalid request parameters |
-| 401 | Unauthorized | Authentication required |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource not found |
-| 409 | Conflict | Resource already exists |
-| 500 | Internal Server Error | Server error |
-
-### Common Error Scenarios
-
-**Authentication Error:**
-```json
-{
-  "statusCode": 401,
-  "message": "Unauthorized",
-  "error": "Invalid or expired token"
-}
-```
-
-**Validation Error:**
-```json
-{
-  "statusCode": 400,
-  "message": "Validation failed",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Invalid email format"
-    }
-  ]
-}
-```
-
-**Permission Error:**
-```json
-{
-  "statusCode": 403,
-  "message": "Forbidden",
-  "error": "Insufficient permissions to perform this action"
-}
-```
-
-**Not Found Error:**
-```json
-{
-  "statusCode": 404,
-  "message": "Resource not found",
-  "error": "Kanji with ID 9999 not found"
-}
-```
-
----
-
-## 🔑 Authentication Headers
-
-For all protected endpoints (marked with 🔒), include the JWT token in the Authorization header:
+Most endpoints require JWT authentication. Include the token in the Authorization header:
 
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer {your_jwt_token}
 ```
+
+## 🛡️ Authorization
+
+Some endpoints require specific roles:
+- **USER**: Default role for authenticated users
+- **ADMIN**: Administrator role with full access
 
 ---
 
 ## 📝 Notes
 
-1. **Base URL**: All endpoints use the base URL `http://localhost:3000` in development
-2. **Content-Type**: All POST/PUT/PATCH requests should use `Content-Type: application/json`
-3. **Authentication**: JWT tokens expire after 24 hours by default
-4. **Pagination**: Default limit is 20 items per page
-5. **Rate Limiting**: API implements rate limiting (details TBD)
-6. **CORS**: Configured for cross-origin requests
+1. All dates are in ISO 8601 format
+2. Pagination uses `limit` and `offset` parameters
+3. All timestamps are in UTC
+4. Base64 images should be in format: `data:image/png;base64,{base64_data}`
+5. JLPT levels: 1 (N1) to 5 (N5), where 5 is easiest
+6. Grades: 1-10, where 1 is elementary school grade 1
 
 ---
 
-## 🚀 Quick Start Example
-
-```bash
-# 1. Register a new user
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123",
-    "name": "John Doe"
-  }'
-
-# 2. Login and get token
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
-
-# 3. Use token to access protected endpoint
-curl -X GET http://localhost:3000/kanji-lists \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
----
-
-**Last Updated**: October 24, 2025  
-**API Version**: 1.0.0  
-**Maintained By**: Development Team
-
-For issues or questions, please contact the development team.
+**Last Updated:** October 29, 2025  
+**API Version:** 1.0.0

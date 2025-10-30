@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../shared/services/prisma.service';
 import { Prisma } from 'generated/prisma';
 
@@ -31,11 +31,8 @@ export class KanjiListService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return {
-      jlptLevel,
-      data: lists,
-      total: lists.length,
-    };
+    // Return array directly (will be wrapped by TransformInterceptor)
+    return lists;
   }
 
   // Get all lists (public + user's own)
@@ -269,13 +266,13 @@ export class KanjiListService {
     });
 
     if (existing) {
-      throw new BadRequestException('Kanji already in list');
+      throw new ConflictException('Kanji already in list');
     }
 
     // Get max order
     const maxOrder = list.items.reduce((max, item) => Math.max(max, item.order), -1);
 
-    await this.prisma.kanjiListItem.create({
+    const newItem = await this.prisma.kanjiListItem.create({
       data: {
         listId,
         kanjiId,
@@ -283,7 +280,7 @@ export class KanjiListService {
       },
     });
 
-    return this.findOne(listId, userId);
+    return newItem;
   }
 
   // Remove kanji from list
@@ -404,7 +401,9 @@ export class KanjiListService {
       }),
     ]);
 
-    return { message: 'Publish request approved', listId: request.listId };
+    return this.prisma.kanjiListPublishRequest.findUnique({
+      where: { id: requestId },
+    });
   }
 
   // Admin: Reject publish request
@@ -431,6 +430,8 @@ export class KanjiListService {
       },
     });
 
-    return { message: 'Publish request rejected' };
+    return this.prisma.kanjiListPublishRequest.findUnique({
+      where: { id: requestId },
+    });
   }
 }

@@ -14,9 +14,10 @@ import { FlashcardDeckModule } from './modules/flashcard/flashcard-deck.module';
 import { QuizModule as QuizModuleNew } from './modules/quiz_new/quiz.module'; // New clean module
 // import { KanjiListModule } from './modules/kanji_list/kanji_list.module'; // Old - rebuild later
 import { KanjiRecognitionModule } from './modules/kanji-recognition/kanji-recognition.module';
-import { AiModule } from './modules/ai/ai.module';
-import { UserModule } from './modules/user_new/user.module'; // New clean module
-import { CategoryModule } from './modules/category/category.module'; // Category module
+import { UserModule } from './modules/user/user.module'; // New clean module
+import { AdminModule } from './modules/admin/admin.module'; // Admin dashboard module
+import { FlashcardSessionModule } from './modules/flashcard-session/flashcard-session.module'; // Flashcard sessions with SM-2
+import { ProgressModule } from './modules/progress/progress.module'; // Progress tracking module
 // import { FlashcardModule } from './modules/flashcard/flashcard.module'; // Old - rebuild later
 // import { QuizModule } from './modules/quiz/quiz.module'; // Old - rebuild later
 // import { AchievementModule } from './modules/achievement/achievement.module'; // Old - not found
@@ -53,14 +54,14 @@ import { RequestLoggerMiddleware } from './middlewares/request-logger.middleware
     // UserModule, // Rebuild later
     // KanjiListModule, // Rebuild later
     KanjiRecognitionModule,
-    AiModule,
     UserModule, // New clean module
-    CategoryModule, // Category module
+    AdminModule, // Admin dashboard module
+    FlashcardSessionModule, // Flashcard sessions with SM-2
+    ProgressModule, // Progress tracking module
     // FlashcardModule, // Rebuild later
     // QuizModule, // Rebuild later
     // QuizModule, // Rebuild later
     // AchievementModule, // Rebuild later
-    AiModule,
   ],
   providers: [
     {

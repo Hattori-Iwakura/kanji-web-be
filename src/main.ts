@@ -41,24 +41,6 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
-      // Enable detailed error messages
-      disableErrorMessages: false,
-      validationError: {
-        target: false,
-        value: true,
-      },
-      exceptionFactory: (errors) => {
-        // Log validation errors for debugging
-        console.error('❌ Validation Errors:', JSON.stringify(errors, null, 2));
-        const messages = errors.map((error) => {
-          return {
-            field: error.property,
-            errors: Object.values(error.constraints || {}),
-          };
-        });
-        console.error('📝 Formatted errors:', JSON.stringify(messages, null, 2));
-        return new ValidationPipe().createExceptionFactory()(errors);
-      },
     }),
   );
   app.useGlobalFilters(new ExceptionResponseFilter(logger));

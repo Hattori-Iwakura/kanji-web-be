@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsNotEmpty, IsString, MinLength, Matches } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, IsOptional } from "class-validator";
 import { Expose } from "class-transformer";
 
 export class LoginDto {
@@ -11,29 +11,69 @@ export class LoginDto {
   @IsString()
   @MinLength(6)
   password: string;
+
+  @ApiProperty({ required: false, example: '123456', description: '2FA code if enabled' })
+  @IsString()
+  @IsOptional()
+  code?: string;
 }
 
 export class RegisterDto {
-  @ApiProperty({ example: 'johndoe', description: 'Username (min 3 chars, alphanumeric and underscore only)' })
-  @IsNotEmpty()
+  @ApiProperty({ 
+    example: 'johndoe', 
+    description: 'Username (min 3 chars, alphanumeric and underscore only)',
+    required: false 
+  })
+  @IsOptional()
   @IsString()
   @MinLength(3)
   @Matches(/^[a-zA-Z0-9_]+$/, { message: 'Account can only contain letters, numbers, and underscores' })
-  account: string;
+  account?: string;
 
   @ApiProperty({ example: 'john.doe@example.com', description: 'Email address' })
   @IsNotEmpty()
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'SecurePass123!', description: 'Password (min 8 chars, must have uppercase, lowercase, number)' })
+  @ApiProperty({ 
+    example: 'SecurePass123!', 
+    description: 'Password (min 6 chars, flexible format for better UX)' 
+  })
   @IsNotEmpty()
   @IsString()
-  @MinLength(8)
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, { 
-    message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
-  })
+  @MinLength(6)
   password: string;
+
+  @ApiProperty({ 
+    example: 'John Doe', 
+    description: 'Full name (optional)',
+    required: false 
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1, { message: 'Name cannot be empty' })
+  name?: string;
+}
+
+export class UpdateProfileDto {
+  @ApiProperty({ 
+    example: 'John Doe', 
+    description: 'Full name',
+    required: false 
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1, { message: 'Name cannot be empty' })
+  name?: string;
+
+  @ApiProperty({ 
+    example: 'https://example.com/avatar.jpg', 
+    description: 'Profile image URL',
+    required: false 
+  })
+  @IsOptional()
+  @IsString()
+  profileImage?: string;
 }
 
 export class ChangePasswordDto {

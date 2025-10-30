@@ -19,6 +19,7 @@ export class FlashcardDeckController {
   constructor(private readonly flashcardDeckService: FlashcardDeckService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   findAll(
     @Query('search') search?: string,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
