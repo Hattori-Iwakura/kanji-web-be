@@ -43,16 +43,20 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  lists                   KanjiList[]
-  decks                   FlashcardDeck[]
-  quizzes                 Quiz[]
-  attempts                QuizAttempt[]
-  sessions                FlashcardStudySession[]
-  publishRequests         QuizPublishRequest[]
-  reviewedPublishRequests QuizPublishRequest[]    @relation("ReviewedBy")
-  passwordResetTokens     PasswordResetToken[]
-  twoFactorAuth           TwoFactorAuth?
-  twoFactorOtps           TwoFactorOtp[]
+  lists                       KanjiList[]
+  decks                       FlashcardDeck[]
+  quizzes                     Quiz[]
+  attempts                    QuizAttempt[]
+  sessions                    FlashcardStudySession[]
+  publishRequests             QuizPublishRequest[]
+  reviewedPublishRequests     QuizPublishRequest[]          @relation("ReviewedBy")
+  kanjiListPublishRequests    KanjiListPublishRequest[]
+  reviewedListPublishRequests KanjiListPublishRequest[]     @relation("ListReviewedBy")
+  deckPublishRequests         FlashcardDeckPublishRequest[] @relation("DeckPublishRequests")
+  reviewedDeckPublishRequests FlashcardDeckPublishRequest[] @relation("DeckReviewedBy")
+  passwordResetTokens         PasswordResetToken[]
+  twoFactorAuth               TwoFactorAuth?
+  twoFactorOtps               TwoFactorOtp[]
 
   @@index([email])
 }
@@ -154,9 +158,10 @@ model KanjiList {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user     User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  items    KanjiListItem[]
+  user           User?                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       Category?                 @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  items          KanjiListItem[]
+  publishRequest KanjiListPublishRequest[]
 
   @@index([userId])
   @@index([isPublic])
@@ -189,9 +194,10 @@ model FlashcardDeck {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cards    FlashcardCard[]
-  sessions FlashcardStudySession[]
+  user           User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards          FlashcardCard[]
+  sessions       FlashcardStudySession[]
+  publishRequest FlashcardDeckPublishRequest[]
 
   @@index([userId])
   @@index([isPublic])
@@ -381,6 +387,10 @@ model KanjiListPublishRequest {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  kanjiList KanjiList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewer  User?     @relation("ListReviewedBy", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
   @@index([listId])
   @@index([userId])
   @@index([status])
@@ -396,6 +406,10 @@ model FlashcardDeckPublishRequest {
   reviewedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+
+  flashcardDeck FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user          User          @relation("DeckPublishRequests", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer      User?         @relation("DeckReviewedBy", fields: [reviewedBy], references: [id], onDelete: SetNull)
 
   @@index([deckId])
   @@index([userId])

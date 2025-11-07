@@ -96,12 +96,13 @@ export class FlashcardDeckService {
   }
 
   // Update deck
-  async update(id: number, userId: number, data: { name?: string; description?: string; isPublic?: boolean }) {
+  async update(id: number, userId: number, data: { name?: string; description?: string; isPublic?: boolean }, userRole?: string) {
     const deck = await this.prisma.flashcardDeck.findUnique({ where: { id } });
     if (!deck) {
       throw new NotFoundException(`Flashcard deck with ID ${id} not found`);
     }
-    if (deck.userId !== userId) {
+    // Allow update if user owns the deck OR user is an admin
+    if (deck.userId !== userId && userRole !== 'ADMIN') {
       throw new ForbiddenException('Cannot update deck you do not own');
     }
 
@@ -115,12 +116,13 @@ export class FlashcardDeckService {
   }
 
   // Delete deck
-  async delete(id: number, userId: number) {
+  async delete(id: number, userId: number, userRole?: string) {
     const deck = await this.prisma.flashcardDeck.findUnique({ where: { id } });
     if (!deck) {
       throw new NotFoundException(`Flashcard deck with ID ${id} not found`);
     }
-    if (deck.userId !== userId) {
+    // Allow delete if user owns the deck OR user is an admin
+    if (deck.userId !== userId && userRole !== 'ADMIN') {
       throw new ForbiddenException('Cannot delete deck you do not own');
     }
 
@@ -128,12 +130,13 @@ export class FlashcardDeckService {
   }
 
   // Add kanji card to deck
-  async addCard(deckId: number, userId: number, kanjiId: number) {
+  async addCard(deckId: number, userId: number, kanjiId: number, userRole?: string) {
     const deck = await this.prisma.flashcardDeck.findUnique({ where: { id: deckId } });
     if (!deck) {
       throw new NotFoundException(`Flashcard deck with ID ${deckId} not found`);
     }
-    if (deck.userId !== userId) {
+    // Allow modification if user owns the deck OR user is an admin
+    if (deck.userId !== userId && userRole !== 'ADMIN') {
       throw new ForbiddenException('Cannot modify deck you do not own');
     }
 
@@ -164,12 +167,13 @@ export class FlashcardDeckService {
   }
 
   // Remove card from deck
-  async removeCard(deckId: number, userId: number, kanjiId: number) {
+  async removeCard(deckId: number, userId: number, kanjiId: number, userRole?: string) {
     const deck = await this.prisma.flashcardDeck.findUnique({ where: { id: deckId } });
     if (!deck) {
       throw new NotFoundException(`Flashcard deck with ID ${deckId} not found`);
     }
-    if (deck.userId !== userId) {
+    // Allow modification if user owns the deck OR user is an admin
+    if (deck.userId !== userId && userRole !== 'ADMIN') {
       throw new ForbiddenException('Cannot modify deck you do not own');
     }
 

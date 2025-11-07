@@ -90,7 +90,7 @@ export class AdminService {
   async getUserStatistics(period: string = 'week') {
     const dateThreshold = this.getDateThreshold(period);
 
-    const [total, newUsers, activeUsers, byRole] = await Promise.all([
+    const [totalUsers, newUsers, activeUsers, byRole] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.user.count({
         where: { createdAt: { gte: dateThreshold } },
@@ -105,7 +105,7 @@ export class AdminService {
     ]);
 
     return {
-      total,
+      totalUsers,
       newUsers,
       activeUsers,
       byRole: byRole.map(r => ({ role: r.role, count: r._count })),
@@ -119,6 +119,7 @@ export class AdminService {
     const dateThreshold = this.getDateThreshold(period);
 
     const [
+      totalKanji,
       totalQuizzes,
       totalLists,
       totalDecks,
@@ -129,6 +130,7 @@ export class AdminService {
       publicLists,
       publicDecks,
     ] = await Promise.all([
+      this.prisma.kanji.count(),
       this.prisma.quiz.count(),
       this.prisma.kanjiList.count({ where: { userId: { not: null } } }),
       this.prisma.flashcardDeck.count(),
@@ -141,9 +143,15 @@ export class AdminService {
     ]);
 
     return {
-      quizzes: { total: totalQuizzes, new: newQuizzes, public: publicQuizzes },
-      lists: { total: totalLists, new: newLists, public: publicLists },
-      decks: { total: totalDecks, new: newDecks, public: publicDecks },
+      totalKanji,
+      totalQuizzes,
+      totalLists,
+      totalDecks,
+      byType: {
+        quizzes: { total: totalQuizzes, new: newQuizzes, public: publicQuizzes },
+        lists: { total: totalLists, new: newLists, public: publicLists },
+        decks: { total: totalDecks, new: newDecks, public: publicDecks },
+      },
     };
   }
 
@@ -199,23 +207,41 @@ export class AdminService {
       dateMap.set(date, (dateMap.get(date) || 0) + u._count);
     });
 
-    const dates: string[] = [];
-    const values: number[] = [];
     let cumulative = await this.prisma.user.count({
       where: { createdAt: { lt: startDate } },
     });
 
+    const data: Array<{ label: string; value: number; timestamp: string }> = [];
     for (let i = 0; i < days; i++) {
       const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split('T')[0];
       const count = dateMap.get(dateStr) || 0;
       cumulative += count;
       
-      dates.push(dateStr);
-      values.push(cumulative);
+      // Format label based on period
+      let label: string;
+      if (days <= 7) {
+        // Show day name for week view
+        label = date.toLocaleDateString('en-US', { weekday: 'short' });
+      } else if (days <= 31) {
+        // Show date for month view
+        label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } else {
+        // Show month for longer periods
+        label = date.toLocaleDateString('en-US', { month: 'short' });
+      }
+      
+      data.push({ label, value: cumulative, timestamp: dateStr });
     }
 
-    return { dates, values, newUsers: Array.from(dateMap.values()) };
+    return { 
+      data, 
+      period,
+      summary: {
+        totalUsers: cumulative,
+        newUsers: Array.from(dateMap.values()).reduce((a, b) => a + b, 0)
+      }
+    };
   }
 
   async getActivityChartData(period: string = '30d') {
@@ -235,9 +261,9 @@ export class AdminService {
       }),
     ]);
 
-    const dates: string[] = [];
-    const quizValues: number[] = [];
-    const flashcardValues: number[] = [];
+    const data: Array<{ label: string; value: number; timestamp: string }> = [];
+    let totalQuizzes = 0;
+    let totalFlashcards = 0;
 
     for (let i = 0; i < days; i++) {
       const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
@@ -251,12 +277,39 @@ export class AdminService {
         f => f.createdAt.toISOString().split('T')[0] === dateStr
       ).reduce((sum, f) => sum + f._count, 0);
 
-      dates.push(dateStr);
-      quizValues.push(quizCount);
-      flashcardValues.push(flashcardCount);
+      totalQuizzes += quizCount;
+      totalFlashcards += flashcardCount;
+      
+      // Format label based on period
+      let label: string;
+      if (days <= 7) {
+        // Show day name for week view
+        label = date.toLocaleDateString('en-US', { weekday: 'short' });
+      } else if (days <= 31) {
+        // Show date for month view
+        label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } else {
+        // Show month for longer periods
+        label = date.toLocaleDateString('en-US', { month: 'short' });
+      }
+      
+      // Total activity = quizzes + flashcard sessions
+      data.push({ 
+        label, 
+        value: quizCount + flashcardCount, 
+        timestamp: dateStr 
+      });
     }
 
-    return { dates, quizAttempts: quizValues, flashcardSessions: flashcardValues };
+    return { 
+      data, 
+      period,
+      summary: {
+        totalQuizzes,
+        totalFlashcards,
+        totalActivity: totalQuizzes + totalFlashcards
+      }
+    };
   }
 
   // ==================== PUBLISH REQUESTS ====================
@@ -293,6 +346,11 @@ export class AdminService {
     if (!type || type === 'list') {
       const listRequests = await this.prisma.kanjiListPublishRequest.findMany({
         where,
+        include: {
+          kanjiList: { select: { name: true, description: true } },
+          user: { select: { email: true, name: true } },
+          reviewer: { select: { email: true, name: true } },
+        },
         orderBy: { createdAt: 'desc' },
         skip: offset,
         take: limit,
@@ -303,6 +361,11 @@ export class AdminService {
     if (!type || type === 'deck') {
       const deckRequests = await this.prisma.flashcardDeckPublishRequest.findMany({
         where,
+        include: {
+          flashcardDeck: { select: { name: true, description: true } },
+          user: { select: { email: true, name: true } },
+          reviewer: { select: { email: true, name: true } },
+        },
         orderBy: { createdAt: 'desc' },
         skip: offset,
         take: limit,
@@ -340,11 +403,37 @@ export class AdminService {
       case 'list':
         request = await this.prisma.kanjiListPublishRequest.findUnique({
           where: { id },
+          include: {
+            kanjiList: {
+              include: {
+                items: {
+                  include: {
+                    kanji: true,
+                  },
+                },
+              },
+            },
+            user: { select: { id: true, email: true, name: true } },
+            reviewer: { select: { id: true, email: true, name: true } },
+          },
         });
         break;
       case 'deck':
         request = await this.prisma.flashcardDeckPublishRequest.findUnique({
           where: { id },
+          include: {
+            flashcardDeck: {
+              include: {
+                cards: {
+                  include: {
+                    kanji: true,
+                  },
+                },
+              },
+            },
+            user: { select: { id: true, email: true, name: true } },
+            reviewer: { select: { id: true, email: true, name: true } },
+          },
         });
         break;
       default:

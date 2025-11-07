@@ -366,10 +366,51 @@ export class KanjiListService {
 
   // Admin: Get all publish requests
   async getPublishRequests(status?: PublishRequestStatus) {
-    return this.prisma.kanjiListPublishRequest.findMany({
+    const requests = await this.prisma.kanjiListPublishRequest.findMany({
       where: status ? { status } : undefined,
       orderBy: { createdAt: 'desc' },
     });
+
+    // Manually fetch related data
+    const enrichedRequests = await Promise.all(
+      requests.map(async (request) => {
+        const list = await this.prisma.kanjiList.findUnique({
+          where: { id: request.listId },
+          select: { id: true, name: true, description: true },
+        });
+        const user = await this.prisma.user.findUnique({
+          where: { id: request.userId },
+          select: { id: true, name: true, email: true },
+        });
+        return { ...request, list, user };
+      })
+    );
+
+    return enrichedRequests;
+  }
+
+  // User: Get own publish requests
+  async getMyPublishRequests(userId: number, status?: PublishRequestStatus) {
+    const requests = await this.prisma.kanjiListPublishRequest.findMany({
+      where: {
+        userId,
+        ...(status ? { status } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Manually fetch related list data
+    const enrichedRequests = await Promise.all(
+      requests.map(async (request) => {
+        const list = await this.prisma.kanjiList.findUnique({
+          where: { id: request.listId },
+          select: { id: true, name: true, description: true },
+        });
+        return { ...request, list };
+      })
+    );
+
+    return enrichedRequests;
   }
 
   // Admin: Approve publish request

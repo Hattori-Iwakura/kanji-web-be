@@ -60,6 +60,14 @@ export class KanjiListController {
     });
   }
 
+  // GET /kanji-lists/my-publish-requests - Get user's own publish requests
+  @Get('my-publish-requests')
+  @UseGuards(JwtAuthGuard)
+  async getMyPublishRequests(@Query('status') status?: string, @Req() req?: any) {
+    const userId = req.user.id;
+    return this.kanjiListService.getMyPublishRequests(userId, status as any);
+  }
+
   // GET /kanji-lists/:id - Get single list (protected to get userId)
   @Get(':id')
   @UseGuards(JwtAuthGuard)

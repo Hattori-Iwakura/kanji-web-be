@@ -53,13 +53,13 @@ export class FlashcardDeckController {
     @Req() req: any,
     @Body() body: { name?: string; description?: string; isPublic?: boolean },
   ) {
-    return this.flashcardDeckService.update(id, req.user.id, body);
+    return this.flashcardDeckService.update(id, req.user.id, body, req.user.role);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   delete(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.flashcardDeckService.delete(id, req.user.id);
+    return this.flashcardDeckService.delete(id, req.user.id, req.user.role);
   }
 
   @Post(':id/cards/:kanjiId')
@@ -69,7 +69,7 @@ export class FlashcardDeckController {
     @Param('kanjiId', ParseIntPipe) kanjiId: number,
     @Req() req: any,
   ) {
-    return this.flashcardDeckService.addCard(id, req.user.id, kanjiId);
+    return this.flashcardDeckService.addCard(id, req.user.id, kanjiId, req.user.role);
   }
 
   @Delete(':id/cards/:kanjiId')
@@ -79,7 +79,7 @@ export class FlashcardDeckController {
     @Param('kanjiId', ParseIntPipe) kanjiId: number,
     @Req() req: any,
   ) {
-    return this.flashcardDeckService.removeCard(id, req.user.id, kanjiId);
+    return this.flashcardDeckService.removeCard(id, req.user.id, kanjiId, req.user.role);
   }
 
   @Post(':id/publish')

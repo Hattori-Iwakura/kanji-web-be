@@ -207,6 +207,53 @@ export class AuthService {
     };
   }
 
+  // ==================== CHANGE PASSWORD (LOGGED-IN USER) ====================
+
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    // Get user
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Check if new password is different from current
+    const isSamePassword = await bcrypt.compare(newPassword, user.passwordHash);
+    if (isSamePassword) {
+      throw new BadRequestException('New password must be different from current password');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    // Send password changed notification (async, don't wait)
+    this.mailService.sendPasswordChangedEmail(
+      user.email,
+      user.name || 'User',
+    ).catch(err => {
+      console.error('Failed to send password changed email:', err);
+    });
+
+    return { message: 'Password changed successfully' };
+  }
+
+  // ==================== RESET PASSWORD (VIA EMAIL TOKEN) ====================
+
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     // Validate token
     const resetToken = await this.prisma.passwordResetToken.findUnique({

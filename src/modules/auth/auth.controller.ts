@@ -84,6 +84,18 @@ export class AuthController {
     return result;
   }
 
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Change password (for logged-in users)' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 400, description: 'Current password is incorrect' })
+  async changePassword(@Req() req: any, @Body() dto: { currentPassword: string; newPassword: string }) {
+    const userId = req.user?.id;
+    const result = await this.auth.changePassword(userId, dto.currentPassword, dto.newPassword);
+    return result;
+  }
+
   @Get('validate-reset-token/:token')
   @ApiOperation({ summary: 'Validate password reset token' })
   @ApiResponse({ status: 200, description: 'Token validation result' })

@@ -14,6 +14,8 @@ import {
   StudyStatisticsResponseDto,
   DeckStatisticsDto,
   CardQuality,
+  ReviewType,
+  ActiveSessionDto,
 } from './dto/flashcard-session.dto';
 
 @Injectable()
@@ -27,7 +29,7 @@ export class FlashcardSessionService {
     userId: number,
     dto: StartSessionDto,
   ): Promise<StartSessionResponseDto> {
-    const { deckId, maxNewCards = 10, maxReviewCards = 20 } = dto;
+    const { deckId, maxNewCards = 10, maxReviewCards = 20, reviewType = ReviewType.ALL } = dto;
 
     // Verify deck exists and user has access
     const deck = await this.prisma.flashcardDeck.findFirst({
@@ -41,27 +43,35 @@ export class FlashcardSessionService {
       throw new NotFoundException('Deck not found or access denied');
     }
 
-    // Get due cards (cards that need review - must have been reviewed before)
-    const now = new Date();
-    const dueCards = await this.prisma.flashcardCard.findMany({
-      where: {
-        deckId,
-        nextReviewAt: { lte: now },
-        lastReviewedAt: { not: null }, // Only cards that have been reviewed before
-      },
-      take: maxReviewCards,
-      orderBy: { nextReviewAt: 'asc' },
-    });
+    // Get cards based on review type
+    let dueCards: any[] = [];
+    let newCards: any[] = [];
 
-    // Get new cards (never studied)
-    const newCards = await this.prisma.flashcardCard.findMany({
-      where: {
-        deckId,
-        lastReviewedAt: null,
-      },
-      take: maxNewCards,
-      orderBy: { id: 'asc' },
-    });
+    // Get due cards if needed
+    if (reviewType === ReviewType.ALL || reviewType === ReviewType.DUE_ONLY) {
+      const now = new Date();
+      dueCards = await this.prisma.flashcardCard.findMany({
+        where: {
+          deckId,
+          nextReviewAt: { lte: now },
+          lastReviewedAt: { not: null }, // Only cards that have been reviewed before
+        },
+        take: maxReviewCards,
+        orderBy: { nextReviewAt: 'asc' },
+      });
+    }
+
+    // Get new cards if needed
+    if (reviewType === ReviewType.ALL || reviewType === ReviewType.NEW_ONLY) {
+      newCards = await this.prisma.flashcardCard.findMany({
+        where: {
+          deckId,
+          lastReviewedAt: null,
+        },
+        take: maxNewCards,
+        orderBy: { id: 'asc' },
+      });
+    }
 
     const totalCards = dueCards.length + newCards.length;
 
@@ -405,6 +415,7 @@ export class FlashcardSessionService {
       where: { id: sessionId },
       data: {
         completedAt,
+        completed: true,
         totalTimeSpent: session.totalTimeSpent || totalTime,
       },
     });
@@ -806,6 +817,52 @@ export class FlashcardSessionService {
       avgEasinessFactor,
       totalStudyTime,
       lastStudiedAt: lastSession?.completedAt || null,
+    };
+  }
+
+  /**
+   * Get active session for a deck (if any)
+   */
+  async getActiveSession(
+    userId: number,
+    deckId: number,
+  ): Promise<ActiveSessionDto | null> {
+    // Find active session for this deck and user
+    const session = await this.prisma.flashcardStudySession.findFirst({
+      where: {
+        userId,
+        deckId,
+        completedAt: null,
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    if (!session) {
+      return null;
+    }
+
+    // Calculate cards remaining
+    const reviewedCount = await this.prisma.sessionCard.count({
+      where: {
+        sessionId: session.id,
+        reviewedAt: { not: null },
+      },
+    });
+
+    const cardsRemaining = session.totalCards - reviewedCount;
+    const accuracy =
+      session.cardsReviewed > 0
+        ? (session.correctAnswers / session.cardsReviewed) * 100
+        : 0;
+
+    return {
+      sessionId: session.id,
+      deckId: session.deckId,
+      totalCards: session.totalCards,
+      cardsReviewed: reviewedCount,
+      cardsRemaining,
+      startedAt: session.startedAt,
+      accuracy: Math.round(accuracy * 10) / 10,
     };
   }
 }

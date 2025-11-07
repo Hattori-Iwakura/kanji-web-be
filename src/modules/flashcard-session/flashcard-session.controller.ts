@@ -27,6 +27,7 @@ import {
   StudyStatisticsQueryDto,
   StudyStatisticsResponseDto,
   DeckStatisticsDto,
+  ActiveSessionDto,
 } from './dto/flashcard-session.dto';
 
 @ApiTags('Flashcard Sessions')
@@ -52,6 +53,21 @@ export class FlashcardSessionController {
     @Body() dto: StartSessionDto,
   ): Promise<StartSessionResponseDto> {
     return this.sessionService.startSession(req.user.id, dto);
+  }
+
+  @Get('active/:deckId')
+  @ApiOperation({ summary: 'Get active session for a deck (if any)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Active session retrieved (or null if none)',
+    type: ActiveSessionDto,
+  })
+  @ApiResponse({ status: 404, description: 'Deck not found or access denied' })
+  async getActiveSession(
+    @Param('deckId', ParseIntPipe) deckId: number,
+    @Req() req: any,
+  ): Promise<ActiveSessionDto | null> {
+    return this.sessionService.getActiveSession(req.user.id, deckId);
   }
 
   @Get(':sessionId')

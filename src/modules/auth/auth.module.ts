@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { ResetPasswordController } from './reset-password.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { TwoFactorService } from './services/two-factor.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -22,7 +23,7 @@ import { MailModule } from '../../shared/mail/mail.module';
     }),
     MailModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, ResetPasswordController],
   providers: [AuthService, TwoFactorService, JwtStrategy, PrismaService],
   exports: [AuthService, TwoFactorService, JwtStrategy, PassportModule],
 })

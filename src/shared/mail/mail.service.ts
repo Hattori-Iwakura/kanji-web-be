@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private readonly appUrl: string;
+  private readonly frontendUrl: string;
   private readonly appName: string;
 
   constructor(
@@ -13,6 +14,7 @@ export class MailService {
     private readonly configService: ConfigService,
   ) {
     this.appUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
+    this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || this.appUrl;
     this.appName = this.configService.get<string>('APP_NAME') || 'Kanji Learning App';
   }
 
@@ -24,6 +26,7 @@ export class MailService {
     name: string,
     token: string,
   ): Promise<void> {
+    // Use API URL for reset password endpoint
     const resetUrl = `${this.appUrl}/reset-password?token=${token}`;
 
     try {
@@ -35,7 +38,7 @@ export class MailService {
           name: name || 'User',
           resetUrl,
           token,
-          appUrl: this.appUrl,
+          appUrl: this.frontendUrl,
         },
       });
 
@@ -62,7 +65,7 @@ export class MailService {
         context: {
           name: name || 'User',
           otp,
-          appUrl: this.appUrl,
+          appUrl: this.frontendUrl,
         },
       });
 
@@ -95,7 +98,7 @@ export class MailService {
               <li>Test your knowledge with quizzes</li>
             </ul>
             <p style="margin-top: 30px;">
-              <a href="${this.appUrl}" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              <a href="${this.frontendUrl}" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                 Start Learning
               </a>
             </p>
@@ -134,7 +137,7 @@ export class MailService {
               </p>
             </div>
             <p style="margin-top: 30px;">
-              <a href="${this.appUrl}/auth/login" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              <a href="${this.frontendUrl}/auth/login" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                 Log In to Your Account
               </a>
             </p>

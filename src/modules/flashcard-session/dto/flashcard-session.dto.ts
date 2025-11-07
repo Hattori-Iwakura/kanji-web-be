@@ -12,6 +12,13 @@ export enum CardQuality {
   PERFECT = 5,                 // Perfect response
 }
 
+// Review Type for Session
+export enum ReviewType {
+  ALL = 'ALL',               // Both new and review cards
+  NEW_ONLY = 'NEW_ONLY',     // Only new cards
+  DUE_ONLY = 'DUE_ONLY',     // Only due review cards
+}
+
 // Start Session DTOs
 export class StartSessionDto {
   @ApiProperty({
@@ -20,6 +27,16 @@ export class StartSessionDto {
   })
   @IsInt()
   deckId: number;
+
+  @ApiPropertyOptional({
+    description: 'Type of review session',
+    enum: ReviewType,
+    example: ReviewType.ALL,
+    default: ReviewType.ALL,
+  })
+  @IsOptional()
+  @IsEnum(ReviewType)
+  reviewType?: ReviewType;
 
   @ApiPropertyOptional({
     description: 'Maximum number of new cards to include',
@@ -326,4 +343,28 @@ export class DeckStatisticsDto {
 
   @ApiProperty({ description: 'Last studied at' })
   lastStudiedAt: Date | null;
+}
+
+// Active Session DTO
+export class ActiveSessionDto {
+  @ApiProperty({ description: 'Session ID' })
+  sessionId: number;
+
+  @ApiProperty({ description: 'Deck ID' })
+  deckId: number;
+
+  @ApiProperty({ description: 'Total cards in session' })
+  totalCards: number;
+
+  @ApiProperty({ description: 'Cards already reviewed' })
+  cardsReviewed: number;
+
+  @ApiProperty({ description: 'Cards remaining' })
+  cardsRemaining: number;
+
+  @ApiProperty({ description: 'Session started at' })
+  startedAt: Date;
+
+  @ApiProperty({ description: 'Accuracy percentage so far' })
+  accuracy: number;
 }
