@@ -34,6 +34,9 @@ model Users {
 
   sessions         UserSession[]
   KanjiCollections KanjiCollections[]
+  Quizzes          Quiz[]
+  QuizResults      QuizResult[]
+  FlashcardDecks   FlashcardDeck[]
 }
 
 model UserSession {
@@ -69,6 +72,8 @@ model Kanji {
   update_at    DateTime @updatedAt
 
   KanjiCollectionItems KanjiCollectionItems[]
+  QuizQuestions        QuizQuestion[]
+  FlashcardCards       FlashcardCard[]
 }
 
 model KanjiCollections {
@@ -101,5 +106,121 @@ model KanjiCollectionItems {
 
   @@unique([collection_id, kanji_id])
   @@index([collection_id])
+  @@index([kanji_id])
+}
+
+enum QuizType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  FILL_IN_BLANK
+  MATCHING
+}
+
+enum QuestionType {
+  KANJI_TO_MEANING // Cho kanji, chọn nghĩa
+  MEANING_TO_KANJI // Cho nghĩa, chọn kanji
+  KANJI_TO_ONYOMI // Cho kanji, chọn âm Hán
+  KANJI_TO_KUNYOMI // Cho kanji, chọn âm Kun
+  READING_TO_KANJI // Cho reading, chọn kanji
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model Quiz {
+  id            Int             @id @default(autoincrement())
+  title         String
+  description   String?
+  user_id       Int? // null = public quiz
+  is_public     Boolean         @default(false)
+  quiz_type     QuizType        @default(MULTIPLE_CHOICE)
+  difficulty    DifficultyLevel @default(MEDIUM)
+  time_limit    Int? // in seconds, null = no limit
+  passing_score Int             @default(70) // percentage
+  create_at     DateTime        @default(now())
+  update_at     DateTime        @updatedAt
+
+  User      Users?         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Questions QuizQuestion[]
+  Results   QuizResult[]
+
+  @@index([user_id])
+  @@index([is_public])
+}
+
+model QuizQuestion {
+  id             Int          @id @default(autoincrement())
+  quiz_id        Int
+  kanji_id       Int
+  question_type  QuestionType
+  question_text  String // Nội dung câu hỏi
+  correct_answer String // Đáp án đúng
+  options        Json? // Các lựa chọn cho multiple choice (array of strings)
+  explanation    String? // Giải thích đáp án
+  points         Int          @default(1)
+  order_index    Int? // Thứ tự câu hỏi
+  create_at      DateTime     @default(now())
+  update_at      DateTime     @updatedAt
+
+  Quiz  Quiz  @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  Kanji Kanji @relation(fields: [kanji_id], references: [id], onDelete: Cascade)
+
+  @@index([quiz_id])
+  @@index([kanji_id])
+}
+
+model QuizResult {
+  id              Int      @id @default(autoincrement())
+  quiz_id         Int
+  user_id         Int
+  score           Int // Điểm số
+  total_questions Int // Tổng số câu hỏi
+  correct_answers Int // Số câu trả lời đúng
+  time_taken      Int? // Thời gian làm bài (seconds)
+  answers         Json // Chi tiết các câu trả lời {question_id, user_answer, is_correct}
+  completed_at    DateTime @default(now())
+
+  Quiz Quiz  @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  User Users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([quiz_id])
+  @@index([user_id])
+  @@index([completed_at])
+}
+
+model FlashcardDeck {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  user_id     Int? // null = public deck
+  is_public   Boolean  @default(false)
+  create_at   DateTime @default(now())
+  update_at   DateTime @updatedAt
+
+  User  Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Cards FlashcardCard[]
+
+  @@index([user_id])
+  @@index([is_public])
+}
+
+model FlashcardCard {
+  id          Int      @id @default(autoincrement())
+  deck_id     Int
+  kanji_id    Int?
+  front_text  String // Text hiển thị mặt trước (có thể là kanji, nghĩa, reading, etc.)
+  back_text   String // Text hiển thị mặt sau (câu trả lời, giải thích)
+  hint        String? // Gợi ý (optional)
+  order_index Int? // Thứ tự card trong deck
+  create_at   DateTime @default(now())
+  update_at   DateTime @updatedAt
+
+  Deck  FlashcardDeck @relation(fields: [deck_id], references: [id], onDelete: Cascade)
+  Kanji Kanji?        @relation(fields: [kanji_id], references: [id], onDelete: SetNull)
+
+  @@index([deck_id])
   @@index([kanji_id])
 }

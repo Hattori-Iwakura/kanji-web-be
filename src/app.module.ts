@@ -12,10 +12,12 @@ import { UserModule } from './modules/user/user.module';
 import { KanjiModule } from './modules/kanji/kanji.module';
 import { KanjiListModule } from './modules/kanji_list/kanji_list.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { QuizModule } from './modules/quiz/quiz.module';
+import { FlashcardModule } from './modules/flashcard/flashcard.module';
 import { DbClient } from './modules/db_client/db_client.service';
 
 @Module({
-  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule, KanjiListModule, AuthModule],
+  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule, KanjiListModule, AuthModule, QuizModule, FlashcardModule],
   controllers: [],
   providers: [
     DbClient,
