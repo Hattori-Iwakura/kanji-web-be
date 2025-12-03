@@ -96,17 +96,25 @@ export class QuizService {
       throw new NotFoundException(`Quiz with ID ${quizId} not found`);
     }
 
-    const questionData: Prisma.QuizQuestionCreateInput = {
+    const questionData: any = {
       Quiz: { connect: { id: quizId } },
-      Kanji: { connect: { id: data.kanji_id } },
       question_type: data.question_type,
       question_text: data.question_text,
       correct_answer: data.correct_answer,
       options: data.options || [],
-      explanation: data.explanation,
       points: data.points ?? 1,
       order_index: data.order_index,
     };
+
+    // Only connect Kanji if kanji_id is provided
+    if (data.kanji_id) {
+      questionData.Kanji = { connect: { id: data.kanji_id } };
+    }
+
+    // Only include explanation if provided
+    if (data.explanation) {
+      questionData.explanation = data.explanation;
+    }
 
     return this.quizRepo.createQuestion(questionData);
   }
@@ -117,17 +125,29 @@ export class QuizService {
       throw new NotFoundException(`Quiz with ID ${quizId} not found`);
     }
 
-    const questionsData: Prisma.QuizQuestionCreateManyInput[] = questions.map((q, index) => ({
-      quiz_id: quizId,
-      kanji_id: q.kanji_id,
-      question_type: q.question_type,
-      question_text: q.question_text,
-      correct_answer: q.correct_answer,
-      options: q.options || [],
-      explanation: q.explanation,
-      points: q.points ?? 1,
-      order_index: q.order_index ?? index,
-    }));
+    const questionsData: Prisma.QuizQuestionCreateManyInput[] = questions.map((q, index) => {
+      const data: any = {
+        quiz_id: quizId,
+        question_type: q.question_type,
+        question_text: q.question_text,
+        correct_answer: q.correct_answer,
+        options: q.options || [],
+        points: q.points ?? 1,
+        order_index: q.order_index ?? index,
+      };
+
+      // Only include kanji_id if provided
+      if (q.kanji_id !== undefined) {
+        data.kanji_id = q.kanji_id;
+      }
+
+      // Only include explanation if provided
+      if (q.explanation !== undefined) {
+        data.explanation = q.explanation;
+      }
+
+      return data;
+    });
 
     return this.quizRepo.createManyQuestions(questionsData);
   }

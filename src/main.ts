@@ -1,11 +1,10 @@
-// giữ nguyên phần import hiện tại
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { LoggerService } from './modules/logger/logger.service';
 import { ExceptionResponseFilter } from './filters/exception-response/exception-response.filter';
 import * as cookieParser from 'cookie-parser';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import helmet from 'helmet';
 
 async function bootstrap() {
@@ -29,9 +28,22 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      forbidNonWhitelisted: true,
       transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // Allow implicit type conversion
+        enableImplicitConversion: true,
+      },
+      exceptionFactory: (errors) => {
+        const messages = errors.map(error => ({
+          field: error.property,
+          constraints: error.constraints,
+        }));
+        logger.error('Validation failed:', JSON.stringify(messages, null, 2));
+        return new BadRequestException({
+          statusCode: 400,
+          message: errors.map(e => Object.values(e.constraints || {}).join(', ')),
+          error: 'Validation Failed'
+        });
       },
     }),
   );

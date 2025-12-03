@@ -20,8 +20,8 @@ export class FlashcardService {
     return this.flashcardRepo.createDeck(data, userId);
   }
 
-  async findAllDecks(query: FlashcardDeckQueryDto) {
-    return this.flashcardRepo.findAllDecks(query);
+  async findAllDecks(query: FlashcardDeckQueryDto, currentUserId?: number) {
+    return this.flashcardRepo.findAllDecks(query, currentUserId);
   }
 
   async findDeckById(id: number, includeCards = false) {

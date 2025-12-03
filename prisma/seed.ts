@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { PrismaClient } from '../generated/prisma';
 import { Hasher } from '../src/shared/utils';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -20,54 +22,31 @@ async function adminCreate() {
 }
 
 async function kanjiSeed() {
-  console.log('🌱 Bắt đầu seed 500 chữ kanji...');
+  console.log('🌱 Bắt đầu seed kanji từ file JSON...');
 
-  // Danh sách một số chữ kanji thật để làm mẫu
-  const sampleKanji = [
-    '日', '月', '火', '水', '木', '金', '土', '年', '時', '分',
-    '人', '男', '女', '子', '学', '生', '先', '私', '友', '母',
-    '父', '兄', '姉', '弟', '妹', '家', '国', '語', '文', '字',
-    '本', '書', '読', '話', '聞', '見', '食', '飲', '行', '来',
-    '出', '入', '上', '下', '中', '外', '前', '後', '左', '右',
-    '大', '小', '高', '低', '長', '短', '新', '古', '多', '少',
-    '一', '二', '三', '四', '五', '六', '七', '八', '九', '十',
-    '百', '千', '万', '円', '店', '買', '売', '物', '品', '車',
-    '電', '気', '力', '海', '山', '川', '雨', '雪', '天', '空',
-    '赤', '青', '白', '黒', '色', '花', '草', '木', '林', '森',
-  ];
+  // Đọc file JSON
+  const jsonPath = path.join(__dirname, 'data', 'kanji-merged.json');
+  const rawData = fs.readFileSync(jsonPath, 'utf-8');
+  const kanjiData = JSON.parse(rawData);
 
-  const onyomiSamples = ['セイ', 'ニチ', 'ガク', 'シン', 'ジン', 'カイ', 'コク', 'ゴ', 'ブン', 'ホン'];
-  const kunyomiSamples = ['ひと', 'やま', 'うみ', 'かわ', 'そら', 'はな', 'き', 'みず', 'ひ', 'つき'];
-  const meaningGroups = [
-    ['person', 'human'], ['mountain', 'peak'], ['sea', 'ocean'], ['river', 'stream'],
-    ['sky', 'heaven'], ['flower', 'blossom'], ['tree', 'wood'], ['water', 'fluid'],
-    ['sun', 'day'], ['moon', 'month'], ['fire'], ['wind'], ['earth', 'soil'],
-    ['learn', 'study'], ['read', 'reading'], ['write', 'writing'], ['speak', 'talk'],
-    ['listen', 'hear'], ['see', 'look'], ['eat', 'food'], ['drink', 'beverage'],
-  ];
-  const radicalSamples = ['人', '木', '水', '火', '土', '日', '月', '山', '川', '心'];
+  const kanjiEntries = Object.entries(kanjiData);
+  const LIMIT = 2500; // Giới hạn 2500 kanji - bao gồm toàn bộ JLPT N5-N1 + Jōyō Kanji
+  
+  console.log(`📊 Tổng số kanji trong file: ${kanjiEntries.length}`);
+  console.log(`📦 Sẽ seed ${Math.min(LIMIT, kanjiEntries.length)} kanji phổ biến nhất...`);
+  console.log(`💡 Đủ cho JLPT N5-N1 và sử dụng hàng ngày`);
 
   let inserted = 0;
   
-  // Tạo 500 chữ kanji, chia đều cho 5 cấp độ JLPT
-  for (let jlptLevel = 5; jlptLevel >= 1; jlptLevel--) {
-    const kanjiPerLevel = 100;
+  for (let i = 0; i < Math.min(LIMIT, kanjiEntries.length); i++) {
+    const [character, data] = kanjiEntries[i] as [string, any];
     
-    for (let i = 0; i < kanjiPerLevel; i++) {
-      const index = (5 - jlptLevel) * 100 + i;
-      
-      // Lấy kanji từ danh sách mẫu hoặc tạo một chuỗi unique
-      const character = index < sampleKanji.length 
-        ? sampleKanji[index]
-        : `漢${index}`; // Dùng prefix 漢 + số để tạo unique character
-      
-      const onyomi = onyomiSamples[Math.floor(Math.random() * onyomiSamples.length)];
-      const kunyomi = kunyomiSamples[Math.floor(Math.random() * kunyomiSamples.length)];
-      const meanings = meaningGroups[Math.floor(Math.random() * meaningGroups.length)].join(', ');
-      const strokeCount = Math.floor(Math.random() * 20) + 3; // 3-22 strokes
-      const grade = jlptLevel >= 4 ? Math.floor(Math.random() * 6) + 1 : null; // Grade 1-6 for N5/N4
-      const frequency = index + 1;
-      const radicals = radicalSamples[Math.floor(Math.random() * radicalSamples.length)];
+    try {
+      // Chuyển đổi readings từ array sang string
+      const onyomi = data.readings_on?.join(', ') || null;
+      const kunyomi = data.readings_kun?.join(', ') || null;
+      const meanings = data.meanings?.join(', ') || 'No meaning';
+      const radicals = data.wk_radicals?.join(', ') || null;
 
       await prisma.kanji.upsert({
         where: { character },
@@ -77,28 +56,38 @@ async function kanjiSeed() {
           onyomi,
           kunyomi,
           meanings,
-          stroke_count: strokeCount,
-          jlpt: jlptLevel,
-          grade,
-          frequency,
+          stroke_count: data.strokes || null,
+          jlpt: data.jlpt_new || data.jlpt_old || null,
+          grade: data.grade || null,
+          frequency: data.freq || null,
           radicals,
         },
       });
 
       inserted++;
-      if (inserted % 100 === 0) {
-        console.log(`✓ Đã seed ${inserted}/500 kanji (JLPT N${jlptLevel})...`);
+      if (inserted % 50 === 0) {
+        console.log(`✓ Đã seed ${inserted}/${LIMIT} kanji...`);
       }
+    } catch (error: any) {
+      console.error(`❌ Lỗi khi seed kanji "${character}":`, error.message);
     }
   }
 
-  console.log(`✅ Seed Kanji hoàn tất! Tổng: ${inserted} chữ kanji (100 chữ/cấp độ cho N5, N4, N3, N2, N1)`);
+  console.log(`✅ Seed Kanji hoàn tất! Tổng: ${inserted} chữ kanji`);
 }
 
 async function main() {
+  console.log('🚀 Bắt đầu seed database...\n');
+  
   // Seed admin user
+  console.log('👤 Tạo admin user...');
   await adminCreate();
+  console.log('✅ Admin user đã tạo\n');
+  
+  // Seed kanji
   await kanjiSeed();
+  
+  console.log('\n🎉 Seed hoàn tất!');
 }
 
 main()

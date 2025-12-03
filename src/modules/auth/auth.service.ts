@@ -1,6 +1,6 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
 import { DbClient } from '../db_client/db_client.service';
-import { randomToken, hashToken, verifyPassword } from '../../utils/hash.util';
+import { randomToken, hashToken, verifyPassword, hashPassword } from '../../utils/hash.util';
 import { JwtService } from '@nestjs/jwt';
 import { add } from 'date-fns/add';
 import { ErrorCode } from 'src/shared/error';
@@ -8,6 +8,51 @@ import { ErrorCode } from 'src/shared/error';
 @Injectable()
 export class AuthService {
   constructor(private readonly db: DbClient, private readonly jwtService: JwtService) {}
+
+  async register(account: string, email: string, password: string) {
+    // Check if account already exists
+    const existingUser = await this.db.users.findFirst({
+      where: {
+        OR: [
+          { account },
+          { email }
+        ]
+      }
+    });
+
+    if (existingUser) {
+      if (existingUser.account === account) {
+        throw new ConflictException('Tên tài khoản đã được sử dụng');
+      }
+      if (existingUser.email === email) {
+        throw new ConflictException('Email đã được sử dụng');
+      }
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+
+    // Create new user
+    const newUser = await this.db.users.create({
+      data: {
+        account,
+        email,
+        hash_password: hashedPassword,
+        role: 'USER',
+        is_active: true,
+        is_first_login: true,
+        create_at: new Date(),
+        update_at: new Date(),
+      }
+    });
+
+    return {
+      id: newUser.id,
+      account: newUser.account,
+      email: newUser.email,
+      role: newUser.role,
+    };
+  }
 
   async login(account: string, password: string, ip?: string, ua?: string) {
     const user = await this.db.users.findFirst({

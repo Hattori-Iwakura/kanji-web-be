@@ -26,24 +26,49 @@ export class FlashcardRepository {
     });
   }
 
-  async findAllDecks(query: FlashcardDeckQueryDto) {
+  async findAllDecks(query: FlashcardDeckQueryDto, currentUserId?: number) {
     const { user_id, is_public, search, page = 1, limit = 10 } = query;
     
     const where: any = {};
+    const conditions: any[] = [];
     
+    // Build visibility filter
+    const visibilityCondition: any = {};
+    if (currentUserId) {
+      // Authenticated: show public decks OR own decks
+      visibilityCondition.OR = [
+        { is_public: true },
+        { user_id: currentUserId }
+      ];
+    } else {
+      // Guest: only public decks
+      visibilityCondition.is_public = true;
+    }
+    conditions.push(visibilityCondition);
+    
+    // Additional filters from query
     if (user_id !== undefined) {
-      where.user_id = user_id;
+      conditions.push({ user_id });
     }
     
     if (is_public !== undefined) {
-      where.is_public = is_public;
+      conditions.push({ is_public });
     }
     
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+      conditions.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ]
+      });
+    }
+
+    // Combine all conditions with AND
+    if (conditions.length > 1) {
+      where.AND = conditions;
+    } else if (conditions.length === 1) {
+      Object.assign(where, conditions[0]);
     }
 
     const skip = (page - 1) * limit;

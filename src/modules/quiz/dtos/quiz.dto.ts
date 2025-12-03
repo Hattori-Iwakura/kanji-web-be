@@ -83,9 +83,10 @@ export class UpdateQuizDto {
 }
 
 export class CreateQuestionDto {
-  @ApiProperty({ description: 'ID của kanji' })
+  @ApiPropertyOptional({ description: 'ID của kanji' })
+  @IsOptional()
   @IsInt()
-  kanji_id: number;
+  kanji_id?: number;
 
   @ApiProperty({ description: 'Loại câu hỏi', enum: QuestionType })
   @IsEnum(QuestionType)

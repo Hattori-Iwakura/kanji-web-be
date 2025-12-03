@@ -26,6 +26,7 @@ import {
   BulkCreateFlashcardCardDto,
 } from './dtos/flashcard-card.dto';
 import { JwtGuard } from '../auth/guard/jwt.guard';
+import { OptionalJwtGuard } from '../auth/guard/optional-jwt.guard';
 import { ErrorCode } from 'src/shared/error/error_code';
 
 @ApiTags('Flashcard')
@@ -36,11 +37,13 @@ export class FlashcardController {
   // ==================== DECK ENDPOINTS ====================
 
   @Get('decks')
+  @UseGuards(OptionalJwtGuard)
   @ApiOperation({ summary: 'Lấy danh sách flashcard decks' })
   @ApiResponse({ status: 200, description: 'Danh sách decks' })
-  async getAllDecks(@Query() query: FlashcardDeckQueryDto) {
+  async getAllDecks(@Query() query: FlashcardDeckQueryDto, @Req() req?: any) {
     try {
-      return await this.flashcardService.findAllDecks(query);
+      const userId = req?.user?.id; // Get user ID from JWT if authenticated
+      return await this.flashcardService.findAllDecks(query, userId);
     } catch (error) {
       throw new BadRequestException({
         code: ErrorCode.BadRequest,

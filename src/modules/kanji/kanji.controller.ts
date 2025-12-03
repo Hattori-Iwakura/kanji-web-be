@@ -1,9 +1,10 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, Put, Delete, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, Put, Delete, NotFoundException, Res } from '@nestjs/common';
 import { KanjiService } from './kanji.service';
 import { Kanji } from 'generated/prisma';
 import { ApiTags } from '@nestjs/swagger';
 import { ErrorCode } from 'src/shared/error';
 import { CreateKanjiDto, UpdateKanjiDto } from './dtos';
+import { Response } from 'express';
 
 @ApiTags('Kanji')
 @Controller('kanji')
@@ -60,6 +61,25 @@ export class KanjiController {
             throw new NotFoundException(ErrorCode.NotFound);
         }
         return kanji;
+    }
+
+    @Get('svg/:character')
+    async getStrokeSvg(@Param('character') character: string, @Res() res: Response): Promise<void> {
+        const unicode = character.charCodeAt(0).toString(16).padStart(5, '0');
+        const svgUrl = `https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/${unicode}.svg`;
+        
+        try {
+            const response = await fetch(svgUrl);
+            if (!response.ok) {
+                throw new NotFoundException('SVG not found');
+            }
+            const svgContent = await response.text();
+            res.setHeader('Content-Type', 'image/svg+xml');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.send(svgContent);
+        } catch (error) {
+            throw new NotFoundException('Failed to fetch SVG');
+        }
     }
 
 }

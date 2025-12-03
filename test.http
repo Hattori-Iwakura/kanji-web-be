@@ -1,0 +1,49 @@
+### Test Register API
+
+### 1. Valid Registration
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "account": "testuser999",
+  "email": "testuser999@example.com",
+  "password": "123456"
+}
+
+### 2. Invalid - Missing email
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "account": "testuser",
+  "password": "123456"
+}
+
+### 3. Invalid - Bad email format
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "account": "testuser",
+  "email": "not-an-email",
+  "password": "123456"
+}
+
+### 4. Invalid - Short password
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "account": "testuser",
+  "email": "test@example.com",
+  "password": "123"
+}
+
+### 5. Login after register
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "account": "testuser999",
+  "password": "123456"
+}

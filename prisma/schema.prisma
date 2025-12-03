@@ -32,11 +32,15 @@ model Users {
   create_at      DateTime @default(now())
   update_at      DateTime @updatedAt
 
-  sessions         UserSession[]
-  KanjiCollections KanjiCollections[]
-  Quizzes          Quiz[]
-  QuizResults      QuizResult[]
-  FlashcardDecks   FlashcardDeck[]
+  sessions                   UserSession[]
+  KanjiCollections           KanjiCollections[]
+  Quizzes                    Quiz[]
+  QuizResults                QuizResult[]
+  FlashcardDecks             FlashcardDeck[]
+  PublicDeckRequests         PublicDeckRequest[] @relation("UserPublicRequests")
+  ReviewedPublicDeckRequests PublicDeckRequest[] @relation("AdminReviewedRequests")
+  PublicQuizRequests         PublicQuizRequest[] @relation("UserPublicQuizRequests")
+  ReviewedPublicQuizRequests PublicQuizRequest[] @relation("AdminReviewedQuizRequests")
 }
 
 model UserSession {
@@ -143,9 +147,10 @@ model Quiz {
   create_at     DateTime        @default(now())
   update_at     DateTime        @updatedAt
 
-  User      Users?         @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  Questions QuizQuestion[]
-  Results   QuizResult[]
+  User           Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Questions      QuizQuestion[]
+  Results        QuizResult[]
+  PublicRequests PublicQuizRequest[]
 
   @@index([user_id])
   @@index([is_public])
@@ -154,7 +159,7 @@ model Quiz {
 model QuizQuestion {
   id             Int          @id @default(autoincrement())
   quiz_id        Int
-  kanji_id       Int
+  kanji_id       Int?
   question_type  QuestionType
   question_text  String // Nội dung câu hỏi
   correct_answer String // Đáp án đúng
@@ -165,8 +170,8 @@ model QuizQuestion {
   create_at      DateTime     @default(now())
   update_at      DateTime     @updatedAt
 
-  Quiz  Quiz  @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
-  Kanji Kanji @relation(fields: [kanji_id], references: [id], onDelete: Cascade)
+  Quiz  Quiz   @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  Kanji Kanji? @relation(fields: [kanji_id], references: [id], onDelete: Cascade)
 
   @@index([quiz_id])
   @@index([kanji_id])
@@ -200,8 +205,9 @@ model FlashcardDeck {
   create_at   DateTime @default(now())
   update_at   DateTime @updatedAt
 
-  User  Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  Cards FlashcardCard[]
+  User           Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Cards          FlashcardCard[]
+  PublicRequests PublicDeckRequest[]
 
   @@index([user_id])
   @@index([is_public])
@@ -223,4 +229,58 @@ model FlashcardCard {
 
   @@index([deck_id])
   @@index([kanji_id])
+}
+
+enum PublicDeckRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PublicDeckRequest {
+  id          Int                     @id @default(autoincrement())
+  deck_id     Int
+  user_id     Int
+  reason      String
+  status      PublicDeckRequestStatus @default(PENDING)
+  admin_note  String?
+  reviewed_by Int?
+  reviewed_at DateTime?
+  create_at   DateTime                @default(now())
+  update_at   DateTime                @updatedAt
+
+  Deck       FlashcardDeck @relation(fields: [deck_id], references: [id], onDelete: Cascade)
+  User       Users         @relation("UserPublicRequests", fields: [user_id], references: [id], onDelete: Cascade)
+  ReviewedBy Users?        @relation("AdminReviewedRequests", fields: [reviewed_by], references: [id])
+
+  @@index([deck_id])
+  @@index([user_id])
+  @@index([status])
+}
+
+enum PublicQuizRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PublicQuizRequest {
+  id          Int                     @id @default(autoincrement())
+  quiz_id     Int
+  user_id     Int
+  reason      String
+  status      PublicQuizRequestStatus @default(PENDING)
+  admin_note  String?
+  reviewed_by Int?
+  reviewed_at DateTime?
+  create_at   DateTime                @default(now())
+  update_at   DateTime                @updatedAt
+
+  Quiz       Quiz   @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  User       Users  @relation("UserPublicQuizRequests", fields: [user_id], references: [id], onDelete: Cascade)
+  ReviewedBy Users? @relation("AdminReviewedQuizRequests", fields: [reviewed_by], references: [id])
+
+  @@index([quiz_id])
+  @@index([user_id])
+  @@index([status])
 }
