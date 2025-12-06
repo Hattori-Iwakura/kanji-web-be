@@ -38,4 +38,9 @@ export class KanjiService {
         const kanji = await this.kanjiRepository.deleteAsync(id);
         return kanji;
     }
+
+    async search(query: string): Promise<Kanji[]> {
+        const kanjis = await this.kanjiRepository.searchAsync(query);
+        return kanjis;
+    }
 }

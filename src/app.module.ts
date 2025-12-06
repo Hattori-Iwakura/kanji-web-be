@@ -14,10 +14,24 @@ import { KanjiListModule } from './modules/kanji_list/kanji_list.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { QuizModule } from './modules/quiz/quiz.module';
 import { FlashcardModule } from './modules/flashcard/flashcard.module';
+import { UserProfileModule } from './modules/user_profile/user_profile.module';
+import { CommunityModule } from './modules/community/community.module';
 import { DbClient } from './modules/db_client/db_client.service';
 
 @Module({
-  imports: [AppConfigModule, LoggerModule, DbClientModule, UserModule, KanjiModule, KanjiListModule, AuthModule, QuizModule, FlashcardModule],
+  imports: [
+    AppConfigModule,
+    LoggerModule,
+    DbClientModule,
+    UserModule,
+    KanjiModule,
+    KanjiListModule,
+    AuthModule,
+    QuizModule,
+    FlashcardModule,
+    UserProfileModule,
+    CommunityModule,
+  ],
   controllers: [],
   providers: [
     DbClient,

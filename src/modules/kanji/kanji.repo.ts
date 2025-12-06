@@ -47,4 +47,22 @@ export class KanjiRepository {
             }
         })
     }
+
+    async searchAsync(query: string): Promise<Kanji[]> {
+        return this.dbClient.kanji.findMany({
+            where: {
+                OR: [
+                    { character: { contains: query } },
+                    { meanings: { contains: query, mode: 'insensitive' } },
+                    { kunyomi: { contains: query, mode: 'insensitive' } },
+                    { onyomi: { contains: query, mode: 'insensitive' } }
+                ]
+            },
+            take: 20, // Limit results to 20
+            orderBy: [
+                { frequency: 'asc' }, // More frequent kanji first
+                { stroke_count: 'asc' }
+            ]
+        })
+    }
 }

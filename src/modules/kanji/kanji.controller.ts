@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, Put, Delete, NotFoundException, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, Put, Delete, NotFoundException, Res, Query } from '@nestjs/common';
 import { KanjiService } from './kanji.service';
 import { Kanji } from 'generated/prisma';
 import { ApiTags } from '@nestjs/swagger';
@@ -15,6 +15,15 @@ export class KanjiController {
     async getAll(): Promise<Kanji[]> {
         const result = await this.kanjiService.getAll();
         return result;
+    }
+
+    @Get('search')
+    async search(@Query('query') query: string): Promise<Kanji[]> {
+        if (!query || query.trim() === '') {
+            return [];
+        }
+        const results = await this.kanjiService.search(query);
+        return results;
     }
 
     @Get(':id')

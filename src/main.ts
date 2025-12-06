@@ -6,12 +6,19 @@ import { ExceptionResponseFilter } from './filters/exception-response/exception-
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import helmet from 'helmet';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
 
   const logger = await app.resolve(LoggerService);
   app.useLogger(logger);
+
+  // Serve static files
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   // security headers
   app.use(helmet());
