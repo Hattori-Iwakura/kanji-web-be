@@ -9,11 +9,15 @@ import {
   SubmitQuizDto,
   QuizResultQueryDto,
 } from './dtos';
-import { Quiz, QuizQuestion, QuizResult, Prisma } from 'generated/prisma';
+import { Quiz, QuizQuestion, QuizResult, Prisma, ActivityType } from 'generated/prisma';
+import { UserProfileService } from '../user_profile/user_profile.service';
 
 @Injectable()
 export class QuizService {
-  constructor(private readonly quizRepo: QuizRepo) {}
+  constructor(
+    private readonly quizRepo: QuizRepo,
+    private readonly userProfileService: UserProfileService,
+  ) {}
 
   // Quiz CRUD
   async createQuiz(data: CreateQuizDto, userId?: number): Promise<Quiz> {
@@ -65,9 +69,15 @@ export class QuizService {
       where.user_id = query.user_id;
     }
 
-    return this.quizRepo.findAllQuizzes({
+    const quizzes = await this.quizRepo.findAllQuizzes({
       where,
       orderBy: { create_at: 'desc' },
+    });
+    
+    // Rename Users to User for frontend
+    return quizzes.map((quiz: any) => {
+      const { Users, ...rest } = quiz;
+      return { ...rest, User: Users };
     });
   }
 
@@ -250,7 +260,9 @@ export class QuizService {
       answers: detailedAnswers,
     };
 
-    return this.quizRepo.createQuizResult(resultData);
+    const result = await this.quizRepo.createQuizResult(resultData);
+
+    return result;
   }
 
   async findResultById(id: number): Promise<QuizResult | null> {

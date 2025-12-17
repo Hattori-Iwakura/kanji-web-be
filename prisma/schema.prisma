@@ -19,18 +19,27 @@ enum UserRole {
   USER
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+  SUSPENDED
+}
+
 model Users {
-  id             Int      @id @default(autoincrement())
-  account        String   @unique
+  id             Int        @id @default(autoincrement())
+  account        String     @unique
   hash_password  String
-  email          String   @unique
+  email          String     @unique
   profile_image  String?
-  role           UserRole @default(USER)
-  is_system      Boolean  @default(false)
-  is_active      Boolean  @default(true)
-  is_first_login Boolean  @default(true)
-  create_at      DateTime @default(now())
-  update_at      DateTime @updatedAt
+  role           UserRole   @default(USER)
+  status         UserStatus @default(ACTIVE)
+  is_system      Boolean    @default(false)
+  is_active      Boolean    @default(true)
+  is_first_login Boolean    @default(true)
+  last_active_at DateTime?
+  create_at      DateTime   @default(now())
+  update_at      DateTime   @updatedAt
 
   sessions                   UserSession[]
   KanjiCollections           KanjiCollections[]
@@ -100,6 +109,7 @@ model KanjiCollections {
   Users                Users?                 @relation(fields: [user_id], references: [id])
   KanjiCollectionItems KanjiCollectionItems[]
 
+  @@unique([name])
   @@index([user_id])
   @@index([collection_type])
 }

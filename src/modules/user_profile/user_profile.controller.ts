@@ -4,6 +4,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { UserProfileService } from './user_profile.service';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
+import { ChangePasswordDto } from './dtos/change-password.dto';
 import { JwtGuard } from '../auth/guard/jwt.guard';
 
 @Controller('user-profile')
@@ -63,7 +64,7 @@ export class UserProfileController {
       },
     }),
   )
-  async uploadAvatar(@Req() req: any, @UploadedFile() file: Express.Multer.File) {
+  async uploadAvatar(@Req() req: any, @UploadedFile() file: any) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -78,5 +79,12 @@ export class UserProfileController {
     await this.userProfileService.updateUserProfileImage(userId, avatarUrl);
 
     return { avatarUrl };
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtGuard)
+  async changePassword(@Req() req: any, @Body() changePasswordDto: ChangePasswordDto) {
+    const userId = req.user.id;
+    return this.userProfileService.changePassword(userId, changePasswordDto);
   }
 }

@@ -61,6 +61,30 @@ export class KanjiListRepository {
         return { collections, total, page, limit };
     }
 
+    async findByUserId(userId: number): Promise<any[]> {
+        return this.dbClient.kanjiCollections.findMany({
+            where: { user_id: userId },
+            include: {
+                _count: {
+                    select: { KanjiCollectionItems: true }
+                },
+                Users: {
+                    select: {
+                        id: true,
+                        account: true,
+                        profile_image: true,
+                        UserProfile: {
+                            select: {
+                                display_name: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { create_at: 'desc' }
+        });
+    }
+
     async findById(id: number, includeKanjis = false): Promise<(KanjiCollections & {
         _count: { KanjiCollectionItems: number };
         KanjiCollectionItems?: any[];

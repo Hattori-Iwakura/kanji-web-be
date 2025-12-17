@@ -84,7 +84,12 @@ export class FlashcardRepository {
             select: {
               id: true,
               account: true,
-              email: true,
+              profile_image: true,
+              UserProfile: {
+                select: {
+                  display_name: true,
+                },
+              },
             },
           },
           _count: {

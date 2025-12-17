@@ -252,4 +252,27 @@ export class FlashcardController {
       });
     }
   }
+
+  // ==================== STUDY TRACKING ====================
+
+  @UseGuards(JwtGuard)
+  @Post('study/record')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Ghi nhận phiên học flashcard' })
+  @ApiResponse({ status: 200, description: 'Phiên học đã được ghi nhận' })
+  async recordStudySession(@Body() data: { deck_id: number; cards_studied: number }, @Req() req: any) {
+    try {
+      const userId = req.user.id;
+      return await this.flashcardService.recordStudySession(
+        userId,
+        data.deck_id,
+        data.cards_studied,
+      );
+    } catch (error) {
+      throw new BadRequestException({
+        code: ErrorCode.BadRequest,
+        message: error.message || 'Failed to record study session',
+      });
+    }
+  }
 }

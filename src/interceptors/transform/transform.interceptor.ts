@@ -11,6 +11,11 @@ export class TransformInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map((data) => {
+        // Skip if already wrapped (prevent double wrapping in tests)
+        if (data && typeof data === 'object' && 'statusCode' in data && 'timestamp' in data) {
+          return data;
+        }
+        
         const res: ResponseDto = {
           statusCode: response.statusCode ?? 200,
           data: data,

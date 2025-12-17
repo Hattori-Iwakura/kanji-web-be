@@ -269,6 +269,7 @@ describe('Community (e2e)', () => {
     it('should fail without auth token', () => {
       return request(app.getHttpServer())
         .post(`/community/posts/${testPostId}/like`)
+        .send({})
         .expect(401);
     });
   });
@@ -382,6 +383,7 @@ describe('Community (e2e)', () => {
     it('should fail without auth token', () => {
       return request(app.getHttpServer())
         .post(`/community/comments/${testCommentId}/like`)
+        .send({})
         .expect(401);
     });
   });

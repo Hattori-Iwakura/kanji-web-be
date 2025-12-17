@@ -71,7 +71,7 @@ export class CommunityController {
       },
     }),
   )
-  async uploadAttachments(@Req() req: any, @UploadedFiles() files: Express.Multer.File[]) {
+  async uploadAttachments(@Req() req: any, @UploadedFiles() files: any[]) {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files uploaded');
     }

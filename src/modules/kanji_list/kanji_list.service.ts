@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { KanjiCollections } from 'generated/prisma';
+import { KanjiCollections, ActivityType } from 'generated/prisma';
 import { KanjiListRepository } from './kanji_list.repo';
 import { 
     CreateKanjiListDto, 
@@ -11,11 +11,13 @@ import {
     GenerateFrequencyListDto,
     BulkAddKanjiDto
 } from './dtos';
+import { UserProfileService } from '../user_profile/user_profile.service';
 
 @Injectable()
 export class KanjiListService {
     constructor(
         private readonly kanjiListRepository: KanjiListRepository,
+        private readonly userProfileService: UserProfileService,
     ) {}
 
     async getAll(query: KanjiListQueryDto): Promise<{
@@ -43,6 +45,19 @@ export class KanjiListService {
                 totalPages: Math.ceil(result.total / result.limit)
             }
         };
+    }
+
+    async getUserLists(userId: number): Promise<any[]> {
+        const collections = await this.kanjiListRepository.findByUserId(userId);
+        
+        return collections.map(collection => {
+            const { _count, Users, ...rest } = collection;
+            return {
+                ...rest,
+                kanji_count: _count.KanjiCollectionItems,
+                User: Users
+            };
+        });
     }
 
     async getById(id: number, includeKanjis = false): Promise<(KanjiCollections & { 
@@ -87,7 +102,7 @@ export class KanjiListService {
         return this.kanjiListRepository.deleteAsync(id);
     }
 
-    async addKanjis(listId: number, data: AddKanjiToListDto): Promise<(KanjiCollections & { kanji_count: number }) | null> {
+    async addKanjis(listId: number, data: AddKanjiToListDto, userId?: number): Promise<(KanjiCollections & { kanji_count: number }) | null> {
         const collection = await this.kanjiListRepository.addKanjis(
             listId, 
             data.kanji_ids, 
@@ -113,7 +128,8 @@ export class KanjiListService {
         };
     }
 
-    async bulkAddKanjis(listId: number, filters: BulkAddKanjiDto): Promise<(KanjiCollections & { kanji_count: number }) | null> {
+    async bulkAddKanjis(listId: number, filters: BulkAddKanjiDto, userId?: number): Promise<(KanjiCollections & { kanji_count: number }) | null> {
+        const collectionBefore = await this.kanjiListRepository.findById(listId);
         const collection = await this.kanjiListRepository.bulkAddKanjis(listId, filters);
         
         if (!collection) return null;

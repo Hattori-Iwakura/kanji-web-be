@@ -37,7 +37,6 @@ export class CreateKanjiListDto {
 
   @ApiPropertyOptional({ description: 'User ID (admin only)' })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
   @IsNumber()
   user_id?: number;
 }
@@ -80,13 +79,19 @@ export class KanjiListQueryDto {
 
   @ApiPropertyOptional({ description: 'Filter by user ID' })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => value ? parseInt(value) : undefined)
   @IsNumber()
   user_id?: number;
 
+  @ApiPropertyOptional({ description: 'Filter by public status' })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  is_public?: boolean;
+
   @ApiPropertyOptional({ description: 'Include public collections', default: true })
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) => value === undefined ? true : value === 'true')
   @IsBoolean()
   include_public?: boolean;
 
@@ -97,13 +102,13 @@ export class KanjiListQueryDto {
 
   @ApiPropertyOptional({ description: 'Page number', default: 1 })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => value ? parseInt(value) : 1)
   @IsNumber()
   page?: number;
 
   @ApiPropertyOptional({ description: 'Items per page', default: 20 })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => value ? parseInt(value) : 20)
   @IsNumber()
   limit?: number;
 }
@@ -112,7 +117,6 @@ export class KanjiListQueryDto {
 export class GenerateJLPTListDto {
   @ApiProperty({ description: 'JLPT Level (1-5)' })
   @IsNumber()
-  @Transform(({ value }) => parseInt(value))
   jlpt_level: number;
 
   @ApiPropertyOptional()
@@ -134,7 +138,6 @@ export class GenerateJLPTListDto {
 export class GenerateGradeListDto {
   @ApiProperty({ description: 'Grade Level (1-6)' })
   @IsNumber()
-  @Transform(({ value }) => parseInt(value))
   grade_level: number;
 
   @ApiPropertyOptional()
@@ -156,7 +159,6 @@ export class GenerateGradeListDto {
 export class GenerateFrequencyListDto {
   @ApiProperty({ description: 'Top N most frequent kanji' })
   @IsNumber()
-  @Transform(({ value }) => parseInt(value))
   top_count: number;
 
   @ApiPropertyOptional()

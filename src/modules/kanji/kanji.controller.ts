@@ -77,17 +77,27 @@ export class KanjiController {
         const unicode = character.charCodeAt(0).toString(16).padStart(5, '0');
         const svgUrl = `https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/${unicode}.svg`;
         
+        console.log(`📥 Fetching SVG for character: ${character}, unicode: ${unicode}, URL: ${svgUrl}`);
+        
         try {
             const response = await fetch(svgUrl);
+            console.log(`📡 GitHub response status: ${response.status}`);
+            
             if (!response.ok) {
-                throw new NotFoundException('SVG not found');
+                console.error(`❌ GitHub returned ${response.status} for ${svgUrl}`);
+                throw new NotFoundException(`SVG not found for character ${character} (unicode: ${unicode})`);
             }
+            
             const svgContent = await response.text();
+            console.log(`✅ Successfully fetched SVG, length: ${svgContent.length}`);
+            
             res.setHeader('Content-Type', 'image/svg+xml');
             res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.setHeader('Access-Control-Allow-Origin', '*');
             res.send(svgContent);
         } catch (error) {
-            throw new NotFoundException('Failed to fetch SVG');
+            console.error(`❌ Error fetching SVG: ${error.message}`);
+            throw new NotFoundException(`Failed to fetch SVG: ${error.message}`);
         }
     }
 

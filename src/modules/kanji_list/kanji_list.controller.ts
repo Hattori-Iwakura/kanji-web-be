@@ -49,6 +49,21 @@ export class KanjiListController {
         }
     }
 
+    @UseGuards(JwtGuard)
+    @Get('my-lists')
+    @ApiOperation({ summary: 'Get current user kanji lists' })
+    async getMyLists(@Req() req) {
+        try {
+            const userId = req.user.id;
+            return await this.kanjiListService.getUserLists(userId);
+        } catch (error) {
+            throw new InternalServerErrorException({
+                code: ErrorCode.DatabaseError,
+                message: 'Failed to retrieve user kanji lists'
+            });
+        }
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'Get kanji list by ID' })
     async getById(
@@ -79,10 +94,12 @@ export class KanjiListController {
     @Post()
     @ApiOperation({ summary: 'Create new kanji list' })
     async createKanjiList(
-        @Body() data: CreateKanjiListDto
+        @Body() data: CreateKanjiListDto,
+        @Req() req
     ) {
         try {
-            return await this.kanjiListService.createAsync(data);
+            const userId = req.user.id;
+            return await this.kanjiListService.createAsync({ ...data, user_id: userId });
         } catch (error) {
             if (error.message?.includes('already exists') || error.code === 'P2002') {
                 throw new ConflictException({
@@ -145,10 +162,12 @@ export class KanjiListController {
     }
 
     @Post(':id/kanjis')
+    @UseGuards(JwtGuard)
     @ApiOperation({ summary: 'Add specific kanjis to list' })
     async addKanjis(
         @Param('id', ParseIntPipe) id: number,
-        @Body() data: AddKanjiToListDto
+        @Body() data: AddKanjiToListDto,
+        @Req() req: any
     ) {
         try {
             if (!data.kanji_ids || data.kanji_ids.length === 0) {
@@ -158,7 +177,8 @@ export class KanjiListController {
                 });
             }
 
-            const result = await this.kanjiListService.addKanjis(id, data);
+            const userId = req.user?.id;
+            const result = await this.kanjiListService.addKanjis(id, data, userId);
             if (!result) {
                 throw new NotFoundException({
                     code: ErrorCode.NotFound,
@@ -178,10 +198,12 @@ export class KanjiListController {
     }
 
     @Post(':id/kanjis/bulk')
+    @UseGuards(JwtGuard)
     @ApiOperation({ summary: 'Bulk add kanjis to list based on filters' })
     async bulkAddKanjis(
         @Param('id', ParseIntPipe) id: number,
-        @Body() data: BulkAddKanjiDto
+        @Body() data: BulkAddKanjiDto,
+        @Req() req: any
     ) {
         try {
             // Validate filters
@@ -213,7 +235,8 @@ export class KanjiListController {
                 });
             }
 
-            const result = await this.kanjiListService.bulkAddKanjis(id, data);
+            const userId = req.user?.id;
+            const result = await this.kanjiListService.bulkAddKanjis(id, data, userId);
             if (!result) {
                 throw new NotFoundException({
                     code: ErrorCode.NotFound,

@@ -16,13 +16,18 @@ import { QuizModule } from './modules/quiz/quiz.module';
 import { FlashcardModule } from './modules/flashcard/flashcard.module';
 import { UserProfileModule } from './modules/user_profile/user_profile.module';
 import { CommunityModule } from './modules/community/community.module';
+import { NewsModule } from './modules/news/news.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { TranslateModule } from './modules/translate/translate.module';
 import { DbClient } from './modules/db_client/db_client.service';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
     AppConfigModule,
     LoggerModule,
     DbClientModule,
+    SharedModule,
     UserModule,
     KanjiModule,
     KanjiListModule,
@@ -31,6 +36,9 @@ import { DbClient } from './modules/db_client/db_client.service';
     FlashcardModule,
     UserProfileModule,
     CommunityModule,
+    NewsModule,
+    AdminModule,
+    TranslateModule,
   ],
   controllers: [],
   providers: [
